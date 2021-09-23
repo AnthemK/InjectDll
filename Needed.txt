@@ -16,19 +16,28 @@ Heap相关函数
 PrintRegCreateKeyEx|PrintRegSetValueEx|PrintRegCloseKey|PrintRegOpenKeyEx|PrintRegDeleteValue
 已解决
 
+去掉static的底色
+已经解决了
+
+
 网络通信的宏
 Printsocket | Printbind | Printsend | Printconnect
 输出新开一个界面输出（抄学长的）   打印进程连接端口、协议类型、IP信息
 HTTP连接协议的解析，判断传输的内容是否为明文
-2.打印进程连接端口、协议类型、IP信息
-HTTP连接协议的解析，判断传输的内容是否为明文
-
+需要做的
 
 rtlMoveMemery   动态赋值
 loadlibrary kernel32.dll
+去掉stdcall
+需要做的
 
 界面，独立的error输出
-
-
+307 342 371 382 464 473 483 523 566 611 662 665 713 787 862
+修改为error输出  并在新界面上输出
 AddToError  《= AddToInfor    改输出
+需要做的
+
+error输出界面            ，输出的换行和进度条问题，以及重复使用问题
+需要解决的
+
 

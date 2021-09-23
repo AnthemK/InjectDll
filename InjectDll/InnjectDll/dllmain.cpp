@@ -67,6 +67,7 @@ const long long PrintOption = PrintHeapAlloc| PrintNowProcessPathInfor;
 #pragma data_seg("MySeg")   //添加共享段
 WCHAR seg[1000][256] = {};               //目前不知道干什么用
 MY_DLL_EXPORT WCHAR Infor[100000] = {};     //最终需要输出的字符串 加上前缀就可以被引用了
+MY_DLL_EXPORT WCHAR ERRORInfor[100000] = {};
 MY_DLL_EXPORT int count = 0;
 volatile int HeapAllocNum = 0;
 WCHAR AvoidProcess[100000][MAX_PATH] = {}, AimProcess[100000][MAX_PATH] = {};
@@ -86,6 +87,7 @@ int flagg;           //用于函数中判断是否出现异常
 FILE* TempOutPath;       //用于输出到文件 默认地址为.\\qwer.txt
 
 MY_DLL_EXPORT void AddToInfor(WCHAR* str){ mtx.lock(); wcscat_s(Infor, str); mtx.unlock();}
+MY_DLL_EXPORT void AddToErrorInfor(WCHAR* str) { mtx.lock(); wcscat_s(ERRORInfor, str); mtx.unlock(); }
 
 MY_DLL_EXPORT void AddAvoidProcess(WCHAR* hLocalPath) { MTXOnProcess.lock(); wcscat_s(AvoidProcess[++CntAvoidProcess], hLocalPath);
 swprintf(BufferStr, 1000, L"Add New Avoid ProcessPath = > %lS\n", hLocalPath);
@@ -299,7 +301,7 @@ MY_DLL_EXPORT LPVOID WINAPI NewHeapAlloc(_In_ HANDLE hHeap,_In_ DWORD dwFlags,_I
         if (*iter == hHeap) {  flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有create过的（句柄为%p）中分配空间\n", hHeap);
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有create过的堆（句柄为%p）中分配空间\n", hHeap);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToInfor(BufferStr); BufferStr[0] = 0;
@@ -365,8 +367,8 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapFree(HANDLE hHeap, DWORD dwFlags, _Frees_ptr_op
         if (*iter == hHeap) { Created_Heap.erase(iter); flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有create过的（句柄为%p）中释放空间\n", hHeap);
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有create过的堆（句柄为%p）中释放空间\n", hHeap);
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，或许需要存储分配的内存的所有指针
        // return SysHeapFree(hHeap, dwFlags, lpMem);          //可能需要调整
@@ -376,7 +378,7 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapFree(HANDLE hHeap, DWORD dwFlags, _Frees_ptr_op
         if (*iter == hHeap) { Heap_Alloc_lp.erase(iter); flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有alloc过的（句柄为%p）中释放空间\n", hHeap);
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有alloc过的堆（句柄为%p）中释放空间\n", hHeap);
         AddToInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，或许需要存储分配的内存的所有指针
@@ -477,7 +479,7 @@ MY_DLL_EXPORT HANDLE WINAPI NewCreateFile(        //还没有测试
     FileNameAddress = (WCHAR*)wcsstr(lpFileName, FileName);
     if (dwDesiredAccess & GENERIC_READ && FileNameAddress != NULL && (FileNameAddress == lpFileName || *(FileNameAddress - 1) == L'\\'))
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 试图复制自身\n");
+        swprintf(BufferStr, 1000, L"ERROR:\n 可能正在试图复制自身\n");
         AddToInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，
@@ -515,7 +517,7 @@ MY_DLL_EXPORT BOOL WINAPI NewCloseHandle(HANDLE hObject)
         if (*iter == hObject) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在关闭一个没有create过的（句柄为%p）的文件句柄\n", hObject);
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在关闭一个没有create过的文件句柄（句柄为%p）\n", hObject);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToInfor(BufferStr); BufferStr[0] = 0;
@@ -558,7 +560,7 @@ MY_DLL_EXPORT BOOL WINAPI NewReadFile(
         if (*iter == hFile) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在使用一个没有create过的（句柄为%p）的文件句柄进行读操作\n", hFile);
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在使用一个没有create过的文件句柄（句柄为%p）进行读操作\n", hFile);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToInfor(BufferStr); BufferStr[0] = 0;
@@ -603,7 +605,7 @@ MY_DLL_EXPORT BOOL WINAPI NewWriteFile(
         if (*iter == hFile) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在使用一个没有create过的（句柄为%p）的文件句柄进行写操作\n", hFile);
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在使用一个没有create过的文件句柄（句柄为%p）进行写操作\n", hFile);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToInfor(BufferStr); BufferStr[0] = 0;

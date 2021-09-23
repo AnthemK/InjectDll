@@ -19,6 +19,7 @@
 
 #pragma comment(lib,"InnjectDll.lib")     //为了引用变量，不能删
 extern "C" DLL_API WCHAR Infor[];
+extern "C" DLL_API WCHAR ERRORInfor[];
 WCHAR* InformationBegin = &Infor[0];
 typedef void(*AddProcess)(WCHAR*);
 AddProcess AddAvoidProc,AddAimProc; 
@@ -148,9 +149,12 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 }
 
 
-HWND DemoFunctionInterface;
-HWND StaticTextWidget;
-HWND MainInterface;
+HWND DemoFunctionInterface;  //演示窗口
+HWND StaticTextWidget;  //静态输出框窗口
+HWND MainInterface;   //主窗口
+HWND Demoedit;   //演示界面的文本框
+HWND ErrorOuput;  //输出错误信息的窗口、
+HWND Errordit;   //输出错误信息的文本框
 //
 //   函数: InitInstance(HINSTANCE, int)
 //
@@ -194,13 +198,15 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    DemoFunctionInterface = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
        375, 350, 600, 200, MainInterface, nullptr, hInst, nullptr);
-   HWND hButton1 = CreateWindow(L"Button", L"有种就来点击我Button1！", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-       35, 45, 160, 80, DemoFunctionInterface, (HMENU)DEMO_BUTTON_ONE, hInst, NULL);
-   HWND hButton2 = CreateWindow(L"Button", L"有种就来点击我Button2！", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-       250, 45, 160, 80, DemoFunctionInterface, (HMENU)DEMO_BUTTON_TWO, hInst, NULL);
-   HWND hButton3 = CreateWindow(L"Button", L"有种就来点击我Button3！", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-       450, 45, 160, 80, DemoFunctionInterface, (HMENU)DEMO_BUTTON_THREE, hInst, NULL);
-   //演示界面上三个按钮
+   //演示界面
+
+   ErrorOuput = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
+       375, 350, 800, 494, DemoFunctionInterface, nullptr, hInst, nullptr);
+   Errordit = CreateWindow(L"edit", L"错误信息输出", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOVSCROLL /*垂直滚动*/| ES_MULTILINE | ES_WANTRETURN| ES_MULTILINE | ES_WANTRETURN,
+       0 /*x坐标*/, 0 /*y坐标*/, 800 /*宽度*/, 494 /*高度*/, ErrorOuput, nullptr, hInst, NULL);
+   //error输出界面            ，输出的换行和进度条问题，以及重复使用问题
+
+
    if (!DemoFunctionInterface) return FALSE;
    if (!MainInterface)  return FALSE;
 
@@ -306,13 +312,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 if (DemoFunctionInterface)
                 {
                     DemoFunctionInterface = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
-                        375, 350, 600, 200, MainInterface, nullptr, hInst, nullptr);
-                    HWND hButton1 = CreateWindow(L"Button", L"有种就来点击我Button1！", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                        35, 45, 160, 80, DemoFunctionInterface, (HMENU)DEMO_BUTTON_ONE, hInst, NULL);
-                    HWND hButton2 = CreateWindow(L"Button", L"有种就来点击我Button2！", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                        250, 45, 160, 80, DemoFunctionInterface, (HMENU)DEMO_BUTTON_TWO, hInst, NULL);
-                    HWND hButton3 = CreateWindow(L"Button", L"有种就来点击我Button3！", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                        450, 45, 160, 80, DemoFunctionInterface, (HMENU)DEMO_BUTTON_THREE, hInst, NULL);
+                        375, 350, 600, 100, MainInterface, nullptr, hInst, nullptr);
+                    HWND hstaticedit = CreateWindow(L"static", L"选择文件", WS_CHILD | WS_VISIBLE | SS_CENTERIMAGE /*垂直居中*/ | SS_RIGHT /*水平居右*/,
+                        0 /*x坐标*/, 20 /*y坐标*/, 70 /*宽度*/, 26 /*高度*/, DemoFunctionInterface, (HMENU)DEMO_STATIC_EDIT, hInst, NULL);
+                    Demoedit = CreateWindow(L"edit", L"", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOHSCROLL /*水平滚动*/,
+                        80, 20, 200, 26, DemoFunctionInterface, (HMENU)DEMO_EDIT, hInst, NULL);
+                    HWND hButton = CreateWindow(L"Button", L"选择文件", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                        330, 20, 200, 26, DemoFunctionInterface, (HMENU)DEMO_BUTTON, hInst, NULL);
                     ShowWindow(DemoFunctionInterface, SW_SHOW);
                     UpdateWindow(DemoFunctionInterface);
                 }else  MessageBox(0,L"TestOwn\r\nTTest",L"Test****",0);
@@ -406,7 +412,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     case WM_CTLCOLORSTATIC:
         {
             HDC hdcStatic = (HDC)wParam;
-          //  SetTextColor(hdcStatic, RGB(0x41, 0x96, 0x4F));  //翠绿色
+            //SetTextColor(hdcStatic, RGB(0x41, 0x96, 0x4F));  //翠绿色
             SetBkMode(hdcStatic, TRANSPARENT);  //透明背景
             return (INT_PTR)GetStockObject(NULL_BRUSH);  //无颜色画刷
 
@@ -444,14 +450,7 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
     {
         switch (LOWORD(wParam))
         {
-        case DEMO_BUTTON_ONE:
-        {
-
-            MessageBox(hWnd, L"您点击了第一个按钮。", L"提示", MB_OK | MB_ICONINFORMATION);
-            SendMessage((HWND)lParam, WM_SETTEXT, (WPARAM)NULL, (LPARAM)L"1");
-        }
-            break;
-        case DEMO_BUTTON_TWO:
+        case DEMO_BUTTON:
             //MessageBox(hWnd, L"您点击了第二个按钮。", L"提示", MB_OK | MB_ICONINFORMATION);
             while (1)
             {
@@ -465,6 +464,7 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
                     //MessageBox(NULL, TEXT("请选择一个文件"), NULL, MB_ICONERROR);
                 }
             }
+           SetWindowTextW(Demoedit,StrFilename);
            startupInfo = { sizeof(STARTUPINFO) }; processInformation = { 0 };
            startupInfo.cb = sizeof(STARTUPINFO);   //不知道有什么用的语句
             //wcscpy_s(StrFilename, L"..\\InjectDll\\Debug\\TestApp.exe");
@@ -474,13 +474,17 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
             BufferStr[0] = 0;
             swprintf(BufferStr, 1000, L"%lS", bSuccess?L"Sucessed":L"Failed");
             MessageBox(NULL, BufferStr, L"Detour ", 0); BufferStr[0] = 0;
-            SendMessage((HWND)lParam, WM_SETTEXT, (WPARAM)NULL, (LPARAM)StrFilename);
-            InvalidateRect(MainInterface, NULL, FALSE);
-            break;
-        case DEMO_BUTTON_THREE:
-            MessageBox(hWnd, L"您点击了第三个按钮。", L"提示", MB_OK | MB_ICONINFORMATION);
+            //SendMessage((HWND)lParam, WM_SETTEXT, (WPARAM)NULL, (LPARAM)StrFilename);
 
-            SendMessage((HWND)lParam, WM_SETTEXT, (WPARAM)NULL, (LPARAM)L"3");
+            ErrorOuput = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
+                375, 350, 800, 494, DemoFunctionInterface, nullptr, hInst, nullptr);
+            Errordit = CreateWindow(L"edit", L"错误信息输出", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOVSCROLL /*垂直滚动*/,
+                0 /*x坐标*/, 0 /*y坐标*/, 800 /*宽度*/, 494 /*高度*/, ErrorOuput, nullptr, hInst, NULL);
+
+            SetWindowTextW(Errordit, ERRORInfor);
+            ShowWindow(ErrorOuput, SW_SHOW);
+            UpdateWindow(ErrorOuput);
+            InvalidateRect(ErrorOuput, NULL, FALSE);
             break;
         default:
             break;
@@ -493,6 +497,14 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
         HDC hdc = BeginPaint(hWnd, &ps);
         // TODO: 在此处添加使用 hdc 的任何绘图代码...
         EndPaint(hWnd, &ps);
+    }
+    break;
+    case WM_CTLCOLORSTATIC:
+    {
+        HDC hdcStatic = (HDC)wParam;
+        //SetTextColor(hdcStatic, RGB(0x41, 0x96, 0x4F));  //翠绿色
+        SetBkMode(hdcStatic, TRANSPARENT);  //透明背景
+        return (INT_PTR)GetStockObject(NULL_BRUSH);  //无颜色画刷
     }
     break;
     case WM_DESTROY:

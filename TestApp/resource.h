@@ -16,9 +16,9 @@
 #define ID_TEST                         32772
 #define IDC_STATIC                      -1
 
-#define DEMO_BUTTON_ONE		3301  
-#define DEMO_BUTTON_TWO		3302
-#define DEMO_BUTTON_THREE	3303
+#define DEMO_STATIC_EDIT	3301  
+#define DEMO_EDIT		3302
+#define DEMO_BUTTON	3303
 #define STATIC_BUTTON_UP 3304
 #define STATIC_BUTTON_DOWN 3305
 #define STATIC_BUTTON_CLEAR 3306
