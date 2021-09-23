@@ -13,3 +13,14 @@ PrintRegCreateKeyEx|PrintRegSetValueEx|PrintRegCloseKey|PrintRegOpenKeyEx|PrintR
 
 网络通信的宏
 Printsocket | Printbind | Printsend | Printconnect
+输出新开一个界面输出（抄学长的）   打印进程连接端口、协议类型、IP信息
+HTTP连接协议的解析，判断传输的内容是否为明文
+
+
+
+
+
+
+当务之急：
+
+

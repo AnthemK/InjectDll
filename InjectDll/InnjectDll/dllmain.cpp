@@ -861,11 +861,6 @@ MY_DLL_EXPORT int WINAPI Newconnect(SOCKET s, const sockaddr * name, int namelen
 
 
 
-
-
-
-
-
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
@@ -882,6 +877,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
         if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestApp.exe") || wcsstr(ProcessPath, L"\\TestConsole.exe")) break;
         //上面部分在dll加载时就会判断是否需要Detour，代替了函数中的判断内容
+        ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
+        swprintf(BufferStr, 1000, L"DLL Inject Success in %lS\n", ProcessPath);
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+
         DisableThreadLibraryCalls(hModule);
         DetourTransactionBegin();
         DetourAttach(&(PVOID&)SysMessageBoxW, NewMessageBoxW);

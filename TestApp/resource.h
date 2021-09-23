@@ -21,6 +21,7 @@
 #define DEMO_BUTTON_THREE	3303
 #define STATIC_BUTTON_UP 3304
 #define STATIC_BUTTON_DOWN 3305
+#define STATIC_BUTTON_CLEAR 3306
 
 #define Infor_Output_axis_step 20
 

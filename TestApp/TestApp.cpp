@@ -22,6 +22,8 @@ extern "C" DLL_API WCHAR Infor[];
 WCHAR* InformationBegin = &Infor[0];
 typedef void(*AddProcess)(WCHAR*);
 AddProcess AddAvoidProc,AddAimProc; 
+typedef void(*lpPrintInfor)(int WillClear);
+lpPrintInfor PrintInf; //函数指针
 
 // 全局变量:
 HINSTANCE hInst;                                // 当前实例，在一个回调函数被调用的时候，此时的句柄即为实例句柄
@@ -45,6 +47,8 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK    FunctionDemoProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+void GetNewInformationBegin(int ,int);
+int GetNumofLine(int );
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,                //引用程序的实例句柄
                      _In_opt_ HINSTANCE hPrevInstance,      //前一个实例
@@ -162,6 +166,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    HMODULE hMod = LoadLibrary(L"C:\\Users\\lenovo\\Desktop\\Working\\SoftwareSecurityExperiment\\InjectDll\\Debug\\InnjectDll.dll");       //最好改成相对地址
    if (hMod == 0) MessageBox(NULL, L"Can't Load Library", L"C:\\Users\\lenovo\\Desktop\\Working\\SoftwareSecurityExperiment\\InjectDll\\Debug\\InnjectDll.dll", 0);
    AddAvoidProc = (AddProcess)GetProcAddress(hMod, "AddAvoidProcess"); AddAimProc = (AddProcess)GetProcAddress(hMod, "AddAimProcess"); //函数指针
+   PrintInf = (lpPrintInfor)GetProcAddress(hMod, "PrintInfor");
    GetModuleFileNameW(NULL, ProcessPath, MAX_PATH);
    AddAvoidProc(ProcessPath); ProcessPath[0] = 0;
    /*BufferStr[0] = 0; GetModuleFileNameW(NULL, BufferStr, MAX_PATH);
@@ -176,13 +181,15 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    nCmd = nCmdShow;
    MainInterface = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);   //使用szWindowClass窗口类创建一个窗口
-   StaticTextWidget = CreateWindow(L"static", L"Hello?", WS_CHILD /*子窗口*/ | WS_VISIBLE /*创建时显示*/ | SS_LEFTNOWORDWRAP /*文本居左，不自动换行（有 '\n' 才会换行），超出控件范围的文本将被隐藏。*/ | WS_BORDER /*带边框*/,   //带边框方便调大小，最后记得去掉
+   StaticTextWidget = CreateWindow(L"static", L"Hello?", WS_CHILD /*子窗口*/ | WS_VISIBLE /*创建时显示*/ | SS_LEFTNOWORDWRAP /*文本居左，不自动换行（有 '\n' 才会换行），超出控件范围的文本将被隐藏。*/ | WS_BORDER /*带边框*/,//| WS_VSCROLL/*带垂直滚动条*/,   //带边框方便调大小，最后记得去掉
        15, 15, 800, 500, MainInterface,/*父窗口句柄*/nullptr,/*为控件指定一个唯一标识符 */ hInst,/*当前程序实例句柄*/NULL);
 
    HWND hButtonup = CreateWindow(L"Button", L"UP", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
        900, 50, 160, 80, MainInterface, (HMENU)STATIC_BUTTON_UP, hInst, NULL);
    HWND hButtondown = CreateWindow(L"Button", L"DOWN", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
        900, 400, 160, 80, MainInterface, (HMENU)STATIC_BUTTON_DOWN, hInst, NULL);
+   HWND hButtonclear = CreateWindow(L"Button", L"CLEAR", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+       900, 225, 160, 80, MainInterface, (HMENU)STATIC_BUTTON_CLEAR, hInst, NULL);
 
    DemoFunctionInterface = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
        375, 350, 600, 200, MainInterface, nullptr, hInst, nullptr);
@@ -204,6 +211,66 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+void GetNewInformationBegin(int typ,int num)            //typ==0相对模式(nunm<0向上，num>0向下)，typ==1绝对模式
+{
+    WCHAR* NowPls, * Lastt;
+    if (typ == 0&&num<0)
+    {
+        num *= -1;
+        while (num--)
+        {
+            NowPls = &Infor[0]; Lastt = &Infor[0];
+            for (; *NowPls != 0; NowPls++)
+            {
+                if ((*NowPls == 0 || *NowPls == L'\n') && NowPls < InformationBegin - 1) Lastt = NowPls;
+                else if (NowPls >= InformationBegin) break;
+            }
+            if (*Lastt == (WCHAR)"\n")InformationBegin = Lastt + 1;
+            else InformationBegin = Lastt;
+        }
+
+    }
+    else if (typ == 0&&num>0)
+    {
+        while (num--)
+        {
+            NowPls = &Infor[0];
+            for (; *NowPls != 0; NowPls++)
+            {
+                if (*NowPls == 0 && NowPls > InformationBegin) {
+                    InformationBegin = NowPls;
+                    break;
+                }
+                else if (*NowPls == L'\n' && NowPls > InformationBegin) {
+                    InformationBegin = NowPls + 1;
+                    break;
+                }
+            }
+        }
+    }
+    else if (typ == 1)
+    {
+            NowPls = &Infor[0]; Lastt = &Infor[0];
+            for (; *NowPls != 0 && num>0; NowPls++)
+            {
+                if ((*NowPls == 0 || *NowPls == L'\n') ) Lastt = NowPls,num--;
+            }
+            if (*Lastt == (WCHAR)"\n")InformationBegin = Lastt + 1;
+            else InformationBegin = Lastt;
+    }
+    return;
+}
+int GetNumofLine(int typ)        //typ==0统计总行数，typ==1统计当前行数
+{
+    int numofline = 1;
+    for (WCHAR* NowPls = &Infor[0]; *NowPls != 0; NowPls++)
+    {
+        if (*NowPls == L'\n') numofline++;
+        if (typ == 1 && NowPls >= InformationBegin) break;
+    }
+    return numofline;
+}
+
 //
 //  函数: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -217,11 +284,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)   //调用DispatchMessage函数之后由系统来调用
 {
     WCHAR* NowPls , *Lastt;
+    static int iVScrollBarPos=1;
     static WCHAR Test_Msg[] = L"Hello, World!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
     switch (message)
     {
     case WM_CREATE:
         {
+            SetScrollRange(hWnd, SB_VERT, 1, GetNumofLine(0), FALSE);
         }
         break;
     case WM_COMMAND:
@@ -252,37 +321,60 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 DestroyWindow(hWnd);      //会在消息序列中添加一条WM_DESTROY消息
                 break;
             case STATIC_BUTTON_UP:
-                NowPls = &Infor[0];Lastt = &Infor[0];
-                for (; *NowPls != 0; NowPls++)
-                {
-                    if ((*NowPls == 0 || *NowPls == L'\n') && NowPls < InformationBegin-1) Lastt = NowPls;
-                    else if (NowPls >= InformationBegin) break;
-                }
-                if (*Lastt == (WCHAR)"\n")InformationBegin = Lastt + 1;
-                else InformationBegin = Lastt;
+                GetNewInformationBegin(0,-1);       //向上翻一行
                 InvalidateRect(MainInterface, NULL, FALSE);
                // Redrawwindow(hWnd,NULL,NULL, RDW_UPDATENOW);
                 break;
             case STATIC_BUTTON_DOWN:
-                NowPls = &Infor[0];
-                for (; *NowPls != 0; NowPls++)
-                {
-                    if (*NowPls == 0 && NowPls > InformationBegin) {
-                        InformationBegin = NowPls;
-                        break;
-                    }
-                    else if (*NowPls == L'\n' && NowPls > InformationBegin) {
-                        InformationBegin = NowPls+1;
-                        break;
-                    }
-                }
+                GetNewInformationBegin(0,1);             //向下翻一行
                 InvalidateRect(MainInterface, NULL,FALSE );
+                break;
+            case STATIC_BUTTON_CLEAR:
+                PrintInf(1);
+                InvalidateRect(MainInterface, NULL, FALSE);
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
         }
         break;
+    case WM_VSCROLL:
+        //垂直滚动条消息，F12查看消息可以从MSDN获取消息详细参数
+      //  MessageBox(hWnd, L"VSCROLL", L"提示", MB_OK | MB_ICONINFORMATION);
+        switch (LOWORD(wParam))
+        {
+        case SB_LINEUP:
+            GetNewInformationBegin(0, -1);       //向上翻一行
+            break;
+        case SB_LINEDOWN:
+            GetNewInformationBegin(0, 1);             //向下翻一行
+            break;
+        case SB_PAGEUP:
+            GetNewInformationBegin(0, -10);       //向上翻一行
+            break;
+        case SB_PAGEDOWN:
+            GetNewInformationBegin(0, 10);             //向下翻一行
+            break;
+        case SB_THUMBTRACK:
+            iVScrollBarPos = HIWORD(wParam);
+            GetNewInformationBegin(1, iVScrollBarPos);
+            break;
+        default:
+            break;
+        }
+        //判断滚动后的滚动条是否超过最大值或最小值，如果超过最大值或者最小值，则取最大值或0，否则等于当前值
+        iVScrollBarPos = GetNumofLine(1);
+        SetScrollRange(hWnd, SB_VERT, 1, GetNumofLine(0), FALSE);
+        //如果滚动条位置发生变化，则设置滚动条位置和刷新屏幕
+        if (iVScrollBarPos != GetScrollPos(hWnd, SB_VERT))
+        {
+            SetScrollPos(hWnd, SB_VERT, iVScrollBarPos, TRUE);
+            //最后参数设置为FALSE可以大幅度减少屏幕闪烁，可以尝试一下。
+            
+        }
+        InvalidateRect(MainInterface, NULL, FALSE);
+        break;
+
     case WM_PAINT:
         {
           //  MessageBox(0, L"TestOwn\r\nTTest", L"Test****", 0);
@@ -380,8 +472,9 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
             //bSuccess = CreateProcessW(L"..\\Virus\\a+b.exe", StrFilename, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &startupInfo, &processInformation);//相对地址
             BufferStr[0] = 0;
             swprintf(BufferStr, 1000, L"%lS", bSuccess?L"Sucessed":L"Failed");
-            MessageBox(NULL, BufferStr, NULL, 0); BufferStr[0] = 0;
+            MessageBox(NULL, BufferStr, L"Detour ", 0); BufferStr[0] = 0;
             SendMessage((HWND)lParam, WM_SETTEXT, (WPARAM)NULL, (LPARAM)StrFilename);
+            InvalidateRect(MainInterface, NULL, FALSE);
             break;
         case DEMO_BUTTON_THREE:
             MessageBox(hWnd, L"您点击了第三个按钮。", L"提示", MB_OK | MB_ICONINFORMATION);
