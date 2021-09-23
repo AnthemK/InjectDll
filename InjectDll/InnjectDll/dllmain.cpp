@@ -21,8 +21,8 @@
 #include <WinSock2.h>
 #pragma comment(lib,"detours.lib")
 
-#define PrintNoInformation
-//#define PrintAllInformation
+//#define PrintNoInformation
+#define PrintAllInformation
 #define PrintMessageBoxW (1)
 #define PrintMessageBoxA (1<<1)
 #define PrintHeapCreate (1<<2)
@@ -79,8 +79,11 @@ std::mutex MTXOnProcess;    //互斥锁，使得同时只有一个访问共享�
 WCHAR BufferStr[100000];    //中间字符串，利用sprintf格式串来生成
 WCHAR ProcessPath[100000];    //存储Path的字符串，专门用来判断当前应用程序的状态（必须，必须不，其他）
 std::vector<HANDLE>Created_Heap;    //存储现在还没有释放的堆
+std::vector<LPVOID>Heap_Alloc_lp;
 std::vector<HANDLE>Created_File;       //存储还没有释放的文件指针
+std::vector<LPVOID>Read_File;
 int flagg;           //用于函数中判断是否出现异常
+FILE* TempOutPath;       //用于输出到文件 默认地址为.\\qwer.txt
 
 MY_DLL_EXPORT void AddToInfor(WCHAR* str){ mtx.lock(); wcscat_s(Infor, str); mtx.unlock();}
 
@@ -286,9 +289,6 @@ static LPVOID(WINAPI* SysHeapAlloc)(_In_ HANDLE hHeap, _In_ DWORD dwFlags, _In_ 
 //问题一大堆
 MY_DLL_EXPORT LPVOID WINAPI NewHeapAlloc(_In_ HANDLE hHeap,_In_ DWORD dwFlags,_In_ SIZE_T dwBytes)  //未测试
 {
-    ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    swprintf(BufferStr, 1000, L"DLL Inject Success in %lS\n", ProcessPath);
-    AddToInfor(BufferStr); BufferStr[0] = 0;
 
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
     if (ProcessPath[0] == 0 ||IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0; return SysHeapAlloc(hHeap, dwFlags, dwBytes);}
@@ -318,7 +318,9 @@ MY_DLL_EXPORT LPVOID WINAPI NewHeapAlloc(_In_ HANDLE hHeap,_In_ DWORD dwFlags,_I
         AddToInfor(BufferStr); BufferStr[0] = 0;
         DLLLogOutput();
     }
-    return SysHeapAlloc(hHeap, dwFlags, dwBytes);
+    LPVOID ReturnHeapLPVOID = SysHeapAlloc(hHeap, dwFlags, dwBytes);
+    Heap_Alloc_lp.push_back(ReturnHeapLPVOID);
+    return ReturnHeapLPVOID;
 }
 
 
@@ -330,7 +332,15 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapDestroy(HANDLE hHeap)
     //if (ProcessPath[0] == 0) system("pause");
     if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0; return SysHeapDestroy(hHeap);}
     ProcessPath[0] = 0; */
-    flagg = 0;
+    for (std::vector<HANDLE>::iterator iter = Created_Heap.begin(); iter != Created_Heap.end(); iter++)
+        if (*iter == hHeap) { Created_Heap.erase(iter); flagg = 1; break; }
+    if (flagg == 0)
+    {
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在destroy一个没有create过的堆，句柄为%p\n", hHeap);
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常
+    }flagg = 0;
     if (PrintOption & PrintHeapDestroy)
     {
         swprintf(BufferStr, 1000, L"\n**************************************************\n");
@@ -342,15 +352,6 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapDestroy(HANDLE hHeap)
         DLLLogOutput();
     }
 
-    for (std::vector<HANDLE>::iterator iter = Created_Heap.begin();iter != Created_Heap.end();iter++)
-        if (*iter == hHeap) { Created_Heap.erase(iter); flagg = 1; break; }
-    if (flagg == 0)
-    {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在destroy一个没有create过的堆，句柄为%p\n", hHeap);
-        AddToInfor(BufferStr); BufferStr[0] = 0;
-        //***************************************************************************************************************************************
-        //此处需要处理一类异常
-    }
     return SysHeapDestroy(hHeap);
 }
 
@@ -368,7 +369,18 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapFree(HANDLE hHeap, DWORD dwFlags, _Frees_ptr_op
         AddToInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，或许需要存储分配的内存的所有指针
-        return SysHeapFree(hHeap, dwFlags, lpMem);          //可能需要调整
+       // return SysHeapFree(hHeap, dwFlags, lpMem);          //可能需要调整
+    }
+    flagg = 0;
+    for (std::vector<LPVOID>::iterator iter = Heap_Alloc_lp.begin(); iter != Heap_Alloc_lp.end(); iter++)
+        if (*iter == hHeap) { Heap_Alloc_lp.erase(iter); flagg = 1; break; }
+    if (flagg == 0)
+    {
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有alloc过的（句柄为%p）中释放空间\n", hHeap);
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常，或许需要存储分配的内存的所有指针
+        //return SysHeapFree(hHeap, dwFlags, lpMem);          //可能需要调整
     }
     
     if (PrintOption & PrintHeapFree)
@@ -395,22 +407,29 @@ MY_DLL_EXPORT int NumberofSubfolders(LPCWSTR lpFileName)         //绝对或者�
     WIN32_FIND_DATA fd;
     HANDLE hFirst;
     int countfolder=0;
+    WCHAR tempPath[10000];
+    wcscpy_s(tempPath, lpFileName);
+    for(int i=wcslen(tempPath);i;i--)
+        if (tempPath[i] == L'\\') { tempPath[i] = 0; break; }
+
     if (lpFileName[0] == '.')       //转绝对路径
     {
         ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-        PathChange((WCHAR*)lpFileName, ProcessPath);
+        PathChange(tempPath, ProcessPath);
         AddToInfor(ProcessPath); //输出绝对路径 
-        wcscat_s(ProcessPath, L"\\*.*");   //表示搜索所有类型文件
+      
+        wcscpy_s(tempPath, ProcessPath);
        // wcscat_s(ProcessPath, lpFileName);wcscpy_s((WCHAR*)lpFileName,(rsize_t)1000, ProcessPath); ProcessPath[0] = 0;
     } 
-    for(hFirst = FindFirstFile(ProcessPath, &fd); FindNextFile(hFirst, &fd);)
+    wcscat_s(tempPath, L"\\*.*");   //表示搜索所有类型文件
+    for (hFirst = FindFirstFile(tempPath, &fd); hFirst != INVALID_HANDLE_VALUE && FindNextFile(hFirst, &fd); )
+    {
         if (fd.dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY && fd.cFileName[0] != '.')
             countfolder++;
+    }
     ProcessPath[0] = 0;
     return countfolder;
 }
-
-
 
 static HANDLE(WINAPI* SysCreateFile)(
     _In_ LPCWSTR lpFileName,             //文件名
@@ -456,7 +475,7 @@ MY_DLL_EXPORT HANDLE WINAPI NewCreateFile(        //还没有测试
     ProcessPath[0] = 0; GetNowProcessPath(ProcessPath); GetFileName(ProcessPath, FileName); ProcessPath[0] = 0;
     WCHAR* FileNameAddress;
     FileNameAddress = (WCHAR*)wcsstr(lpFileName, FileName);
-    if (dwDesiredAccess & GENERIC_READ && (FileNameAddress == NULL || *(FileNameAddress - 1) != L'\\'))
+    if (dwDesiredAccess & GENERIC_READ && FileNameAddress != NULL && (FileNameAddress == lpFileName || *(FileNameAddress - 1) == L'\\'))
     {
         swprintf(BufferStr, 1000, L"ERROR:\n 试图复制自身\n");
         AddToInfor(BufferStr); BufferStr[0] = 0;
@@ -539,7 +558,7 @@ MY_DLL_EXPORT BOOL WINAPI NewReadFile(
         if (*iter == hFile) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在Read一个没有create过的（句柄为%p）的文件句柄\n", hFile);
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在使用一个没有create过的（句柄为%p）的文件句柄进行读操作\n", hFile);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToInfor(BufferStr); BufferStr[0] = 0;
@@ -556,6 +575,7 @@ MY_DLL_EXPORT BOOL WINAPI NewReadFile(
         AddToInfor(BufferStr); BufferStr[0] = 0;
         DLLLogOutput();
     }
+    Read_File.push_back(lpBuffer);
     return SysReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 }
 
@@ -583,7 +603,7 @@ MY_DLL_EXPORT BOOL WINAPI NewWriteFile(
         if (*iter == hFile) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在Write一个没有create过的（句柄为%p）的文件句柄\n", hFile);
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在使用一个没有create过的（句柄为%p）的文件句柄进行写操作\n", hFile);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToInfor(BufferStr); BufferStr[0] = 0;
@@ -632,7 +652,7 @@ MY_DLL_EXPORT LSTATUS WINAPI NewRegCreateKeyEx(
     LPDWORD                     lpdwDisposition
 ) {
     LSTATUS ReturnLSTATU=SysRegCreateKeyEx(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
-    if (*lpdwDisposition == REG_CREATED_NEW_KEY&&ERROR_SUCCESS== ReturnLSTATU)
+    if (*lpdwDisposition == REG_CREATED_NEW_KEY && ERROR_SUCCESS== ReturnLSTATU)
     {
         swprintf(BufferStr, 1000, L"ERROR:\n 正在创建一个新的注册表项\n");
         //***************************************************************************************************************************************
@@ -829,6 +849,17 @@ static int (WINAPI* Syssend)(
     int        flags
     ) = send;
 MY_DLL_EXPORT int WINAPI Newsend(SOCKET s, const char* buf, int len, int flags) {
+    flagg = 0;
+    for (std::vector<LPVOID>::iterator iter = Read_File.begin(); iter != Read_File.end(); iter++)
+        if (buf == *iter) { flagg = 1; break; }
+    if (flagg == 0)
+    {
+        swprintf(BufferStr, 1000, L"ERROR:\n 正在向网络发送从文件中读取的信息\n");
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        //return SysReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+    }
     if (PrintOption & Printsend)
     {
         swprintf(BufferStr, 1000, L"\n**************************************************\n");
@@ -862,10 +893,70 @@ MY_DLL_EXPORT int WINAPI Newconnect(SOCKET s, const sockaddr * name, int namelen
     return Sysconnect(s, name, namelen);
 }
 
+/**************************************************************************************************************
+内存拷贝监测与关联分析
+***************************************************************************************************************/
+//暂时不能用   去掉stdcall？
+/*
+typedef  VOID(* RelMemoryOption)(VOID UNALIGNED* Destination, const VOID UNALIGNED* Source, SIZE_T Length);
+static VOID (* SysRtlMoveMemory)(
+    VOID UNALIGNED* Destination,
+    const VOID UNALIGNED* Source,
+    SIZE_T Length
+);
+MY_DLL_EXPORT VOID NewRtlMoveMemory(
+    VOID UNALIGNED* Destination,
+    const VOID UNALIGNED* Source,
+    SIZE_T Length
+) {
+    if (PrintOption & Printsocket)
+    {
+        swprintf(BufferStr, 1000, L"\n**************************************************\n");
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"MoveMemory Hooked\n");
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"\nParameters:\nDestination = > %p\nSource = > %p\nLength = > %d\n", Destination, Source, Length);
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        DLLLogOutput();
+    }
+    return SysRtlMoveMemory(Destination, Source, Length);
+}
+
+static VOID(* SysRtlCopyMemory)(
+    VOID UNALIGNED* Destination,
+    const VOID UNALIGNED* Source,
+    SIZE_T Length
+    );
+MY_DLL_EXPORT VOID NewRtlCopyMemory(
+    VOID UNALIGNED* Destination,
+    const VOID UNALIGNED* Source,
+    SIZE_T Length
+) {
+    if (PrintOption & Printsocket)
+    {
+        swprintf(BufferStr, 1000, L"\n**************************************************\n");
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"CopyMemory Hooked\n");
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"\nParameters:\nDestination = > %p\nSource = > %p\nLength = > %d\n", Destination, Source, Length);
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        DLLLogOutput();
+    }
+    return SysRtlCopyMemory(Destination, Source, Length);
+}
+*/
 
 
 
-BOOL APIENTRY DllMain( HMODULE hModule,
+
+WCHAR TEMP[1000000];
+void Test()
+{
+
+}
+
+
+MY_DLL_EXPORT BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
                      )
@@ -873,6 +964,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
    // GetNowProcessPath(ProcessPath);       //调试用，全部DLL感染文件全部avoid
    // AddAvoidProcess(ProcessPath);ProcessPath[0] = 0;
     //测试
+    fopen_s(&TempOutPath, ".\\qwer.txt", "w");
     if (DetourIsHelperProcess())
     {
         return TRUE;
@@ -880,13 +972,22 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
     switch (ul_reason_for_call)
     {
-    case DLL_THREAD_ATTACH:                 //疑似应该这样，原本在case DLL_PROCESS_ATTACH: 后面
     case DLL_PROCESS_ATTACH:
     {
         ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-        if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestApp.exe") || wcsstr(ProcessPath, L"\\TestConsole.exe")|| wcsstr(ProcessPath, L"\\rundll32.exe")) break;
-        //上面部分在dll加载时就会判断是否需要Detour，代替了函数中的判断内容
-
+        if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestConsole.exe") || wcsstr(ProcessPath, L"\\TestApp.exe")) break;
+        if (wcsstr(ProcessPath, L"\\rundll32.exe"))
+        {
+            BufferStr[0] = 0;
+            swprintf(BufferStr, 1000, L"Not a 32-bit program\n");
+            AddToInfor(BufferStr); BufferStr[0] = 0;
+            break;
+        }
+        //上面部分在dll加载时就会判断是否需要Detour，代替了函数中的判断内容 ||wcsstr(ProcessPath,L"\\TestApp.exe")||wcsstr(ProcessPath,L"\\rundll32.exe")
+        ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
+        swprintf(BufferStr, 1000, L"DLL Inject Success in %lS\n", ProcessPath);
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        Test();
         DisableThreadLibraryCalls(hModule);
         DetourTransactionBegin();
         DetourAttach(&(PVOID&)SysMessageBoxW, NewMessageBoxW);
@@ -907,20 +1008,37 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         DetourAttach(&(PVOID&)SysRegDeleteValue, NewRegDeleteValue);
         DetourAttach(&(PVOID&)SysRegCloseKey, NewRegCloseKey);
         DetourAttach(&(PVOID&)SysRegOpenKeyEx, NewRegOpenKeyEx);
-
-        /*DetourAttach(&(PVOID&)Syssocket, Newsocket);
+        
+        DetourAttach(&(PVOID&)Syssocket, Newsocket);
         DetourAttach(&(PVOID&)Sysbind, Newbind);
         DetourAttach(&(PVOID&)Syssend, Newsend);
         DetourAttach(&(PVOID&)Sysconnect, Newconnect);
+
+        /*HMODULE hMod = LoadLibrary(L"kermel32.dll");
+        SysRtlMoveMemory =(RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
+        DetourAttach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
+
+
+        SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlCopyMemory");
+        DetourAttach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
+        //*/
         //*/
         DetourTransactionCommit();
         break;
-    }
+    } 
+    case DLL_THREAD_ATTACH:                 //疑似应该这样，原本在case DLL_PROCESS_ATTACH: 后面
     case DLL_THREAD_DETACH:
     case DLL_PROCESS_DETACH:
     {
         ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-        if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestApp.exe") || wcsstr(ProcessPath, L"\\TestConsole.exe") || wcsstr(ProcessPath, L"\\rundll32.exe")) break;
+        if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestConsole.exe") || wcsstr(ProcessPath, L"\\TestApp.exe")) break;
+        if (wcsstr(ProcessPath, L"\\rundll32.exe"))
+        {
+            BufferStr[0] = 0;
+            swprintf(BufferStr, 1000, L"Not a 32-bit program\n");
+            AddToInfor(BufferStr); BufferStr[0] = 0;
+            break;
+        }
         DetourTransactionBegin();
         DetourUpdateThread(GetCurrentThread());
         DetourDetach(&(PVOID&)SysMessageBoxW, NewMessageBoxW);
@@ -941,11 +1059,20 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         DetourDetach(&(PVOID&)SysRegDeleteValue, NewRegDeleteValue);
         DetourDetach(&(PVOID&)SysRegCloseKey, NewRegCloseKey);
         DetourDetach(&(PVOID&)SysRegOpenKeyEx, NewRegOpenKeyEx);
-        /*
+        //*/
+        
         DetourDetach(&(PVOID&)Syssocket, Newsocket);
         DetourDetach(&(PVOID&)Sysbind, Newbind);
         DetourDetach(&(PVOID&)Syssend, Newsend);
         DetourDetach(&(PVOID&)Sysconnect, Newconnect);
+
+        /*HMODULE hMod = LoadLibrary(L"kermel32.dll");
+        SysRtlMoveMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
+        DetourDetach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
+
+        SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlCopyMemory");
+        DetourDetach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
+        //*/
         //*/
         DetourTransactionCommit();
         break;

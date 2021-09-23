@@ -1,26 +1,34 @@
 Heap相关函数
 是否要存储分配的内存指针（分堆存储？一起存储）  似乎在程序结束时没有手动释放的会自动释放
+已解决
 
 文件操作的一堆判断
-
+已解决
 
 是否把文件读取后发送到网络  ReadFile
+在send中判断  856
+已解决
 
 测试CreateFile文件的各个操作
+算是解决了
 
 改注册表的宏
 PrintRegCreateKeyEx|PrintRegSetValueEx|PrintRegCloseKey|PrintRegOpenKeyEx|PrintRegDeleteValue
+已解决
 
 网络通信的宏
 Printsocket | Printbind | Printsend | Printconnect
 输出新开一个界面输出（抄学长的）   打印进程连接端口、协议类型、IP信息
 HTTP连接协议的解析，判断传输的内容是否为明文
+2.打印进程连接端口、协议类型、IP信息
+HTTP连接协议的解析，判断传输的内容是否为明文
 
 
+rtlMoveMemery   动态赋值
+loadlibrary kernel32.dll
+
+界面，独立的error输出
 
 
-
-
-当务之急：
-目标exe到底有没有Detour成功
+AddToError  《= AddToInfor    改输出
 

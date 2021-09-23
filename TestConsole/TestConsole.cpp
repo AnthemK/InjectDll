@@ -26,7 +26,7 @@
 #else  
 #define DLL_API __declspec(dllimport)  
 #endif  
-#define CountdownBeforeExit 5
+#define CountdownBeforeExit 3
 
 #pragma comment(lib,"detours.lib")
 #pragma comment(lib,"InnjectDll.lib")     //为了引用变量，不能删
@@ -40,16 +40,10 @@ lpPrintInfor PrintInf; //函数指针，输出Infor
 typedef void(*AddProcess)(WCHAR*);
 AddProcess AddAvoidProc, AddAimProc;  //添加一个路径进Avoid或者Aim
 HINSTANCE hDll; //DLL句柄
-PROCESS_INFORMATION pi;   //进程信息
-STARTUPINFO si;          //开始信息（？）
 //extern _export "C"{char* Infor[]; }
 int main(int argc, char* argv[])
 {
 	std::cout << "This program will attach DLL to EXE" << std::endl;
-	
-	ZeroMemory(&si, sizeof(STARTUPINFO));
-	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
-	si.cb = sizeof(STARTUPINFO);
 	/*
 	std::cout << argv[0] << std::endl;printf("%lS\n",GetCommandLineW());
 	if (argc > 1) std::cout << argv[1] << std::endl;
@@ -78,6 +72,7 @@ int main(int argc, char* argv[])
 	WCHAR EXEPath[MAX_PATH + 1] = { 0 };
 	if(argv[0][0]==0||argc<=0) wcscpy_s(EXEPath, MAX_PATH, L"..\\Debug\\TestApp.exe");//需要注入程序的地址  已经为相对地址
 	else MultiByteToWideChar(CP_ACP, 0, argv[0], strlen(argv[0]), EXEPath, sizeof(EXEPath));
+	//wcscpy_s(EXEPath, MAX_PATH, L"C:\\Users\\lenovo\\Desktop\\Working\\SoftwareSecurityExperiment\\Virus\\Sample.exe");
 	printf("EXEPath = >%lS\n", EXEPath);
 
 	hDll = LoadLibraryA(DLLPath);  //为了引入函数所加载的动态链接库，不能删
@@ -96,9 +91,16 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 	ProcessPath[0] = 0;
+
+	STARTUPINFO si;          //开始信息（？）
+	PROCESS_INFORMATION pi;   //进程信息
+	ZeroMemory(&si, sizeof(STARTUPINFO));
+	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+	si.cb = sizeof(STARTUPINFO);
+	int idxcnt=0;
+
 	if (DetourCreateProcessWithDllEx(EXEPath, NULL, NULL, NULL, TRUE,
-		CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED, NULL, DirPath, &si, &pi,
-		DLLPath, NULL))
+		CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED, NULL, DirPath, &si, &pi,DLLPath, NULL))
 	{
 		//MessageBoxA(NULL, "INJECTED", NULL, NULL);
 		ResumeThread(pi.hThread);
@@ -144,3 +146,21 @@ int main(int argc, char* argv[])
 //   4. 使用错误列表窗口查看错误
 //   5. 转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
 //   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
+
+
+
+
+
+
+
+
+
+
+/*HMODULE hMod = LoadLibrary(L"kermel32.dll");
+SysRtlMoveMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
+DetourDetach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
+
+SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlCopyMemory");
+DetourDetach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
+//*/
+//*/
