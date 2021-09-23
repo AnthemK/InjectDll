@@ -30,8 +30,8 @@ HINSTANCE hInst;                                // 当前实例，在一个回�
 int nCmd;
 WCHAR szTitle[MAX_LOADSTRING];                  // 标题栏文本
 WCHAR szWindowClass[MAX_LOADSTRING];            // 主窗口类名
-WCHAR szDemoFunctionInterfaceClass[MAX_LOADSTRING];
-WCHAR szDemoFunctionInterfaceClassTitle[MAX_LOADSTRING];
+WCHAR szDemoFunctionInterfaceClass[MAX_LOADSTRING];         // 演示窗口窗口类名
+WCHAR szDemoFunctionInterfaceClassTitle[MAX_LOADSTRING];       //演示窗口文本
 WCHAR BufferStr[100000];
 WCHAR ProcessPath[100000];    //存储Path的字符串，专门用来判断当前应用程序的状态（必须，必须不，其他）
 OPENFILENAME ofn = { 0 };   //文件选择的信息
@@ -139,7 +139,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     ofn.nFilterIndex = 1;//过滤器索引
     ofn.lpstrFile = StrFilename;//接收返回的文件名，注意第一个字符需要为NULL
     ofn.nMaxFile = sizeof(StrFilename);//缓冲区长度
-    ofn.lpstrInitialDir = L"C:\\Users\\lenovo\\Desktop\\Working\\SoftwareSecurityExperiment\\Virus";//初始目录为默认
+    ofn.lpstrInitialDir = L".\\";//初始目录为默认
     ofn.lpstrTitle = TEXT("请选择一个文件");//使用系统默认标题留空即可
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;//文件、目录必须存在，隐藏只读选项
 
@@ -179,7 +179,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    hInst = hInstance; // 将实例句柄存储在全局变量中
    nCmd = nCmdShow;
-   MainInterface = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   MainInterface = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW|WS_VSCROLL,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);   //使用szWindowClass窗口类创建一个窗口
    StaticTextWidget = CreateWindow(L"static", L"Hello?", WS_CHILD /*子窗口*/ | WS_VISIBLE /*创建时显示*/ | SS_LEFTNOWORDWRAP /*文本居左，不自动换行（有 '\n' 才会换行），超出控件范围的文本将被隐藏。*/ | WS_BORDER /*带边框*/,//| WS_VSCROLL/*带垂直滚动条*/,   //带边框方便调大小，最后记得去掉
        15, 15, 800, 500, MainInterface,/*父窗口句柄*/nullptr,/*为控件指定一个唯一标识符 */ hInst,/*当前程序实例句柄*/NULL);
@@ -190,6 +190,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        900, 400, 160, 80, MainInterface, (HMENU)STATIC_BUTTON_DOWN, hInst, NULL);
    HWND hButtonclear = CreateWindow(L"Button", L"CLEAR", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
        900, 225, 160, 80, MainInterface, (HMENU)STATIC_BUTTON_CLEAR, hInst, NULL);
+   //主界面上三个按钮
 
    DemoFunctionInterface = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
        375, 350, 600, 200, MainInterface, nullptr, hInst, nullptr);
@@ -199,13 +200,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        250, 45, 160, 80, DemoFunctionInterface, (HMENU)DEMO_BUTTON_TWO, hInst, NULL);
    HWND hButton3 = CreateWindow(L"Button", L"有种就来点击我Button3！", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
        450, 45, 160, 80, DemoFunctionInterface, (HMENU)DEMO_BUTTON_THREE, hInst, NULL);
-   if (!DemoFunctionInterface) return false;
+   //演示界面上三个按钮
+   if (!DemoFunctionInterface) return FALSE;
    if (!MainInterface)  return FALSE;
 
    ShowWindow(MainInterface, nCmd);   //展示窗口，第一个参数为窗口句柄，第二个参数为控制窗口如何显示，此处采用WinMain中传过来的参数
    UpdateWindow(MainInterface);        //似乎可有可无？
-
-
 
    //*/
    return TRUE;
@@ -339,6 +339,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         }
         break;
     case WM_VSCROLL:
+    {
         //垂直滚动条消息，F12查看消息可以从MSDN获取消息详细参数
       //  MessageBox(hWnd, L"VSCROLL", L"提示", MB_OK | MB_ICONINFORMATION);
         switch (LOWORD(wParam))
@@ -368,13 +369,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         //如果滚动条位置发生变化，则设置滚动条位置和刷新屏幕
         if (iVScrollBarPos != GetScrollPos(hWnd, SB_VERT))
         {
-            SetScrollPos(hWnd, SB_VERT, iVScrollBarPos, TRUE);
+            SetScrollPos(hWnd, SB_VERT, iVScrollBarPos, FALSE);
             //最后参数设置为FALSE可以大幅度减少屏幕闪烁，可以尝试一下。
-            
+
         }
         InvalidateRect(MainInterface, NULL, FALSE);
         break;
-
+    }
     case WM_PAINT:
         {
           //  MessageBox(0, L"TestOwn\r\nTTest", L"Test****", 0);
@@ -479,7 +480,6 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
         case DEMO_BUTTON_THREE:
             MessageBox(hWnd, L"您点击了第三个按钮。", L"提示", MB_OK | MB_ICONINFORMATION);
 
-
             SendMessage((HWND)lParam, WM_SETTEXT, (WPARAM)NULL, (LPARAM)L"3");
             break;
         default:
@@ -497,7 +497,8 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
     break;
     case WM_DESTROY:
         //PostQuitMessage(0);       //向消息序列提交一条WM_QUIT消息，它会使得GetMessage函数返回0。因此对出循环
-        ShowWindow(hWnd, SW_HIDE);
+        ShowWindow(DemoFunctionInterface, SW_HIDE);
+        //ShowWindow(MainInterface, SW_SHOW);
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);   //让系统继续处理

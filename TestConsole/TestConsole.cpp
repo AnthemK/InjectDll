@@ -26,27 +26,27 @@
 #else  
 #define DLL_API __declspec(dllimport)  
 #endif  
-#define CountdownBeforeExit 10
+#define CountdownBeforeExit 5
 
 #pragma comment(lib,"detours.lib")
 #pragma comment(lib,"InnjectDll.lib")     //为了引用变量，不能删
-extern "C" DLL_API int count;        //在dll里面引用的变量
-extern "C" DLL_API WCHAR Infor[];
+//extern "C" DLL_API int count;        //在dll里面引用的变量
+//extern "C" DLL_API WCHAR Infor[];
+//根据fc老师所说，最好不要引用变量而是用函数来解决问题
 
 WCHAR ProcessPath[100000];    //存储Path的字符串，专门用来判断当前应用程序的状态（必须，必须不，其他）
 typedef void(*lpPrintInfor)(int WillClear);
-lpPrintInfor PrintInf; //函数指针
+lpPrintInfor PrintInf; //函数指针，输出Infor
 typedef void(*AddProcess)(WCHAR*);
-AddProcess AddAvoidProc, AddAimProc;
+AddProcess AddAvoidProc, AddAimProc;  //添加一个路径进Avoid或者Aim
 HINSTANCE hDll; //DLL句柄
+PROCESS_INFORMATION pi;   //进程信息
+STARTUPINFO si;          //开始信息（？）
 //extern _export "C"{char* Infor[]; }
 int main(int argc, char* argv[])
 {
-    //std::cout << "Hello World!\n";
-
 	std::cout << "This program will attach DLL to EXE" << std::endl;
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
+	
 	ZeroMemory(&si, sizeof(STARTUPINFO));
 	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 	si.cb = sizeof(STARTUPINFO);
@@ -61,8 +61,8 @@ int main(int argc, char* argv[])
 	WCHAR DirPath[MAX_PATH + 1]; GetCurrentDirectoryW(MAX_PATH, DirPath);;
 	int LenthDirPath = wcslen(DirPath);
 	for (int i = LenthDirPath - 1; i; i--)
-		if (DirPath[i] == '\\') { DirPath[i] = 0; break; }
-	swprintf(DirPath, MAX_PATH, L"%lS\\InjectDll\\Debug", DirPath);     //获取WCHAR型的文件夹路径
+		if (DirPath[i] == '\\' || i == 0) { DirPath[i] = 0; break; }
+	wcscat_s(DirPath, L"\\InjectDll\\Debug");     //获取WCHAR型的文件夹路径
 	printf("DirPath = >%lS\n", DirPath);              
 
 
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 	char DLLPath[MAX_PATH + 1]; GetCurrentDirectoryA(MAX_PATH, DLLPath);
 	int LenthDLLPath = strlen(DLLPath);
 	for (int i = LenthDLLPath - 1; i; i--)
-		if (DLLPath[i] == '\\') { DLLPath[i] = 0; break; }
+		if (DLLPath[i] == '\\' || i == 0) { DLLPath[i] = 0; break; }
 	strcat_s(DLLPath, "\\InjectDll\\Debug\\InnjectDll.dll");        //获取char型的dll文件路径
 	printf("DLLPath = >%s\n", DLLPath);
 
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 	else MultiByteToWideChar(CP_ACP, 0, argv[0], strlen(argv[0]), EXEPath, sizeof(EXEPath));
 	printf("EXEPath = >%lS\n", EXEPath);
 
-	hDll = LoadLibraryA(DLLPath);  //为了引入函数所加载的，不能删
+	hDll = LoadLibraryA(DLLPath);  //为了引入函数所加载的动态链接库，不能删
 	if (hDll == 0)
 	{
 		printf("Error Load Library\n");Sleep(1000);
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
 	AddAvoidProc(ProcessPath); AddAimProc(EXEPath);   //当前文件不应当被Detour，目标文件应当被Detour
 	if (wcscmp(ProcessPath, EXEPath) == 0 || EXEPath[0] == 0)
 	{
-		printf("Aim Program is NULL or this program\n"); Sleep(1000);
+		printf("Aim Program is NULL or this program itself\n"); Sleep(1000);
 		return 0;
 	}
 	ProcessPath[0] = 0;
@@ -107,7 +107,6 @@ int main(int argc, char* argv[])
 		//printf("Yes\n");
 		if (hDll != NULL)
 		{
-			
 			if (PrintInf != NULL)
 			{
 				std::cout << std::endl;
@@ -115,6 +114,9 @@ int main(int argc, char* argv[])
 				std::cout << std::endl;
 			}
 			FreeLibrary(hDll);
+		}
+		else {
+			std::cout << "Can't output Information" << std::endl;
 		}
 	} else {
 		char error[100];

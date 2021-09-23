@@ -65,14 +65,14 @@ const long long PrintOption = PrintHeapAlloc| PrintNowProcessPathInfor;
 #define MY_DLL_IMPORT extern "C" __declspec(dllimport)
 
 #pragma data_seg("MySeg")   //添加共享段
-WCHAR seg[1000][256] = {};
+WCHAR seg[1000][256] = {};               //目前不知道干什么用
 MY_DLL_EXPORT WCHAR Infor[100000] = {};     //最终需要输出的字符串 加上前缀就可以被引用了
 MY_DLL_EXPORT int count = 0;
 volatile int HeapAllocNum = 0;
 WCHAR AvoidProcess[100000][MAX_PATH] = {}, AimProcess[100000][MAX_PATH] = {};
 int CntAvoidProcess = 0, CntAimProcess = 0;
-std::mutex mtx;      //互斥锁，使得同时只有一个访问共享段，防止出现数据混乱
-std::mutex MTXOnProcess;
+std::mutex mtx;      //互斥锁，使得同时只有一个访问共享段，防止出现数据混乱,写入Infor时使用
+std::mutex MTXOnProcess;    //互斥锁，使得同时只有一个访问共享段，防止出现数据混乱,写入AvoidProcess/AimProcess时使用
 #pragma data_seg()
 #pragma comment(linker, "/section:MySeg,RWS")
 
@@ -83,7 +83,6 @@ std::vector<HANDLE>Created_File;       //存储还没有释放的文件指针
 int flagg;           //用于函数中判断是否出现异常
 
 MY_DLL_EXPORT void AddToInfor(WCHAR* str){ mtx.lock(); wcscat_s(Infor, str); mtx.unlock();}
-
 
 MY_DLL_EXPORT void AddAvoidProcess(WCHAR* hLocalPath) { MTXOnProcess.lock(); wcscat_s(AvoidProcess[++CntAvoidProcess], hLocalPath);
 swprintf(BufferStr, 1000, L"Add New Avoid ProcessPath = > %lS\n", hLocalPath);
@@ -100,7 +99,7 @@ MY_DLL_EXPORT DWORD IfDetour(WCHAR* hLocalPath) {
 
      for (int i = 1; i <= CntAvoidProcess; ++i)            //判断是否为avoid ，注意avoid的优先级高于aim因此如果一个应用程序同时出现在两处，会被判断为Avoid
     {
-        if (wcscmp(AvoidProcess[i], hLocalPath) == 0)return 0;      //表示当前进程不能Detour
+        if (wcscmp(AvoidProcess[i], hLocalPath) == 0) return 0;      //表示当前进程不能Detour
         if (PrintOption & PrintAllProcessPathInfor)    //如果定义宏就输出全部的Avoid的Path
         {
             swprintf(BufferStr, 1000, L"Avoid Process%d = > %lS\n", i, AvoidProcess[i]);
@@ -110,7 +109,7 @@ MY_DLL_EXPORT DWORD IfDetour(WCHAR* hLocalPath) {
 
      for (int i = 1; i <= CntAimProcess; ++i)
     {
-        if (wcscmp(AimProcess[i], hLocalPath) == 0)return 1;         //表示当前进程必须要Detour
+        if (wcscmp(AimProcess[i], hLocalPath) == 0) return 1;         //表示当前进程必须要Detour
         if (PrintOption & PrintAllProcessPathInfor)
         {
             swprintf(BufferStr, 1000, L"Aim Process%d = > %lS\n", i, AimProcess[i]);
@@ -120,7 +119,7 @@ MY_DLL_EXPORT DWORD IfDetour(WCHAR* hLocalPath) {
 
     if (PrintOption & PrintNowProcessPathInfor) {       //如果定义宏就输出每一次比较时得当前应用程序
         BufferStr[0] = 0;
-        swprintf(BufferStr, 10000, L"Now ProcessPath = > %lS\n\n\n\n", hLocalPath);
+        swprintf(BufferStr, 10000, L"Now ProcessPath = > %lS\n", hLocalPath);
         AddToInfor(BufferStr); BufferStr[0] = 0;
     }
     return 2;         //表示当前进程可以Detour也可以不Detour
@@ -131,15 +130,16 @@ MY_DLL_EXPORT BOOL GetNowProcessPath(WCHAR* lpModuleName)    //一个直接获�
     if (!GetModuleFileNameW(NULL, lpModuleName, MAX_PATH))
     {
         MessageBoxW(NULL, L"进程名称获取失败", L"TIP", 0);     //注意到此处的messagebox要求本进程必须不能被Detour(注射器程序应该不能被Detour)
+        wprintf(L"进程名称获取失败\n");
         return FALSE;
     }
     return TRUE;
 }
 
-int PathChange(WCHAR* InputPath,WCHAR* CurrentPath) {           //通过当前路径（当前文件夹）以及相对路径获得绝对路径，放到CurrentPath里面
+MY_DLL_EXPORT int PathChange(WCHAR* InputPath,WCHAR* CurrentPath) {           //通过当前路径（当前文件）以及相对路径获得绝对路径，放到CurrentPath里面
     WCHAR tempPath[MAX_PATH] = {0};
     int templenth=0;
-    for (int i = wcslen(CurrentPath) - 1; i; i--)
+    for (int i = wcslen(CurrentPath) - 1; i; i--)          //去掉文件名，获得当前文件夹
         if (CurrentPath[i] == '\\') { CurrentPath[i] = 0; break; }
     for (int i = 0; i <= wcslen(InputPath); ++i)
     {
@@ -166,7 +166,7 @@ int PathChange(WCHAR* InputPath,WCHAR* CurrentPath) {           //通过当前�
     return TRUE;
 }
 
-int GetFileName(WCHAR* lpPathName,WCHAR* lpFileName)       //把lpPathName的末尾（最后一个'\\'之后）放到lpFileName
+MY_DLL_EXPORT int GetFileName(WCHAR* lpPathName,WCHAR* lpFileName)       //把lpPathName的末尾（最后一个'\\'之后）放到lpFileName
 {
     lpFileName[0] = 0;
     for (int i = wcslen(lpPathName) - 1; i; i--)
@@ -286,6 +286,10 @@ static LPVOID(WINAPI* SysHeapAlloc)(_In_ HANDLE hHeap, _In_ DWORD dwFlags, _In_ 
 //问题一大堆
 MY_DLL_EXPORT LPVOID WINAPI NewHeapAlloc(_In_ HANDLE hHeap,_In_ DWORD dwFlags,_In_ SIZE_T dwBytes)  //未测试
 {
+    ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
+    swprintf(BufferStr, 1000, L"DLL Inject Success in %lS\n", ProcessPath);
+    AddToInfor(BufferStr); BufferStr[0] = 0;
+
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
     if (ProcessPath[0] == 0 ||IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0; return SysHeapAlloc(hHeap, dwFlags, dwBytes);}
     ProcessPath[0] = 0; 
@@ -869,17 +873,19 @@ BOOL APIENTRY DllMain( HMODULE hModule,
    // GetNowProcessPath(ProcessPath);       //调试用，全部DLL感染文件全部avoid
    // AddAvoidProcess(ProcessPath);ProcessPath[0] = 0;
     //测试
+    if (DetourIsHelperProcess())
+    {
+        return TRUE;
+    }
 
     switch (ul_reason_for_call)
     {
+    case DLL_THREAD_ATTACH:                 //疑似应该这样，原本在case DLL_PROCESS_ATTACH: 后面
     case DLL_PROCESS_ATTACH:
     {
         ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-        if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestApp.exe") || wcsstr(ProcessPath, L"\\TestConsole.exe")) break;
+        if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestApp.exe") || wcsstr(ProcessPath, L"\\TestConsole.exe")|| wcsstr(ProcessPath, L"\\rundll32.exe")) break;
         //上面部分在dll加载时就会判断是否需要Detour，代替了函数中的判断内容
-        ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-        swprintf(BufferStr, 1000, L"DLL Inject Success in %lS\n", ProcessPath);
-        AddToInfor(BufferStr); BufferStr[0] = 0;
 
         DisableThreadLibraryCalls(hModule);
         DetourTransactionBegin();
@@ -910,12 +916,11 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         DetourTransactionCommit();
         break;
     }
-    case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
     case DLL_PROCESS_DETACH:
     {
         ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-        if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestApp.exe") || wcsstr(ProcessPath, L"\\TestConsole.exe")) break;
+        if (IfDetour(ProcessPath) == 0 || wcsstr(ProcessPath, L"\\TestApp.exe") || wcsstr(ProcessPath, L"\\TestConsole.exe") || wcsstr(ProcessPath, L"\\rundll32.exe")) break;
         DetourTransactionBegin();
         DetourUpdateThread(GetCurrentThread());
         DetourDetach(&(PVOID&)SysMessageBoxW, NewMessageBoxW);
