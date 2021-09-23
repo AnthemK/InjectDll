@@ -1,0 +1,15 @@
+Heap相关函数
+是否要存储分配的内存指针（分堆存储？一起存储）  似乎在程序结束时没有手动释放的会自动释放
+
+文件操作的一堆判断
+
+
+是否把文件读取后发送到网络  ReadFile
+
+测试CreateFile文件的各个操作
+
+改注册表的宏
+PrintRegCreateKeyEx|PrintRegSetValueEx|PrintRegCloseKey|PrintRegOpenKeyEx|PrintRegDeleteValue
+
+网络通信的宏
+Printsocket | Printbind | Printsend | Printconnect
