@@ -937,16 +937,16 @@ MY_DLL_EXPORT int WINAPI Newconnect(SOCKET s, const sockaddr * name, int namelen
 ***************************************************************************************************************/
 //暂时不能用   去掉stdcall？
 /*
-typedef  VOID(* __stdcall  RelMemoryOption)(VOID UNALIGNED* Destination, const VOID UNALIGNED* Source, SIZE_T Length);
-static VOID (*WINAPI SysRtlMoveMemory)(
-    VOID UNALIGNED* Destination,
-    const VOID UNALIGNED* Source,
-    SIZE_T Length
+typedef  VOID( __stdcall * RelMemoryOption)(PVOID, const VOID*, SIZE_T);
+static VOID (WINAPI *SysRtlMoveMemory)(
+    _In_ PVOID Destination,
+    _In_ const VOID * Source,
+    _In_ SIZE_T Length
 );
-MY_DLL_EXPORT VOID NewRtlMoveMemory(
-    VOID UNALIGNED* Destination,
-    const VOID UNALIGNED* Source,
-    SIZE_T Length
+MY_DLL_EXPORT VOID WINAPI NewRtlMoveMemory(
+    _In_ PVOID Destination,
+    _In_ const VOID * Source,
+    _In_ SIZE_T Length
 ) {
     if (PrintOption & Printsocket)
     {
@@ -1053,7 +1053,8 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain( HMODULE hModule,
         DetourAttach(&(PVOID&)Syssend, Newsend);
         DetourAttach(&(PVOID&)Sysconnect, Newconnect);
 
-       /* HINSTANCE hMod = LoadLibrary(L"kermel32.dll");
+        /*
+        HINSTANCE hMod = LoadLibrary(L"kermel32.dll");
         SysRtlMoveMemory =(RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
         DetourAttach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
 
@@ -1105,7 +1106,7 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain( HMODULE hModule,
         DetourDetach(&(PVOID&)Syssend, Newsend);
         DetourDetach(&(PVOID&)Sysconnect, Newconnect);
 
- /*       HMODULE hMod = LoadLibrary(L"kermel32.dll");
+   /*     HINSTANCE hMod = LoadLibrary(L"kermel32.dll");
         SysRtlMoveMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
         DetourDetach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
 
