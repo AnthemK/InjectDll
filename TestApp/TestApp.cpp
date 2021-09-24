@@ -9,6 +9,7 @@
 //选择文件夹对话框
 #include<Shlobj.h>
 #include <vector>
+#include <assert.h>
 
 #define MAX_LOADSTRING 1000
 #ifdef DLL_IMPLEMENT  
@@ -526,7 +527,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_INITDIALOG:
         return (INT_PTR)TRUE;
-
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
         {

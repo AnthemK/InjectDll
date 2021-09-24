@@ -19,6 +19,7 @@
 //选择文件夹对话框
 #include<Shlobj.h>
 #include <WinSock2.h>
+#include <assert.h>
 #pragma comment(lib,"detours.lib")
 
 //#define PrintNoInformation
@@ -44,6 +45,9 @@
 #define Printbind (1<<18)
 #define Printsend (1<<19)
 #define Printconnect (1<<20)
+#define PrintMoveMemory (1<<21)
+#define PrintCopyMemory (1<<22)
+//#define PrintErrorAllocNotCreate (1<<23)
 
 #ifdef PrintNoInformation
 const long long PrintOption=0;          //通过这个来限制参数输出
@@ -297,10 +301,12 @@ MY_DLL_EXPORT LPVOID WINAPI NewHeapAlloc(_In_ HANDLE hHeap,_In_ DWORD dwFlags,_I
         if (*iter == hHeap) {  flagg = 1; break; }
     if (flagg == 0)
     {
+        #ifdef PrintErrorAllocNotCreate
         swprintf(BufferStr, 1000, L"ERROR:\r\n 正在一个没有create过的堆（句柄为%p）中分配空间\r\n", hHeap);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToErrorInfor(BufferStr); BufferStr[0] = 0;
+        #endif  
         return SysHeapAlloc(hHeap, dwFlags, dwBytes);           //可能需要调整
     }
 
@@ -854,7 +860,9 @@ MY_DLL_EXPORT int WINAPI Newbind(SOCKET s, const sockaddr * name, int namelen) {
 
     if (sizeof(*name) == sizeof(sockaddr_in))
     {
-        swprintf(BufferStr, 1000, L"SOCKET:\r\n 端口为%d,Addr 为%d\r\n", ((sockaddr_in* )name)->sin_port, ((sockaddr_in*)name)->sin_addr.s_addr);
+        int IPAddr[10];
+        for (int i = 4; i; --i) IPAddr[i] = ((sockaddr_in*)name)->sin_addr.s_addr & 0xff, ((sockaddr_in*)name)->sin_addr.s_addr >>= 8;
+        swprintf(BufferStr, 1000, L"SOCKET:\r\n 端口为%d,Addr 为%d.%d.%d.%d\r\n", ((sockaddr_in* )name)->sin_port, IPAddr[4], IPAddr[3], IPAddr[2], IPAddr[1]);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToErrorInfor(BufferStr); BufferStr[0] = 0;
@@ -936,19 +944,19 @@ MY_DLL_EXPORT int WINAPI Newconnect(SOCKET s, const sockaddr * name, int namelen
 内存拷贝监测与关联分析
 ***************************************************************************************************************/
 //暂时不能用   去掉stdcall？
-/*
+
 typedef  VOID( __stdcall * RelMemoryOption)(PVOID, const VOID*, SIZE_T);
 static VOID (WINAPI *SysRtlMoveMemory)(
-    _In_ PVOID Destination,
-    _In_ const VOID * Source,
-    _In_ SIZE_T Length
+    _In_ PVOID,
+    _In_ const VOID *,
+    _In_ SIZE_T
 );
 MY_DLL_EXPORT VOID WINAPI NewRtlMoveMemory(
     _In_ PVOID Destination,
     _In_ const VOID * Source,
     _In_ SIZE_T Length
 ) {
-    if (PrintOption & Printsocket)
+    if (PrintOption & PrintMoveMemory)
     {
         swprintf(BufferStr, 1000, L"\n**************************************************\n");
         AddToInfor(BufferStr); BufferStr[0] = 0;
@@ -958,20 +966,22 @@ MY_DLL_EXPORT VOID WINAPI NewRtlMoveMemory(
         AddToInfor(BufferStr); BufferStr[0] = 0;
         DLLLogOutput();
     }
-    return SysRtlMoveMemory(Destination, Source, Length);
+    SysRtlMoveMemory(Destination, Source, Length);
+    return;
 }
 
-static VOID(*WINAPI SysRtlCopyMemory)(
-    VOID UNALIGNED* Destination,
-    const VOID UNALIGNED* Source,
-    SIZE_T Length
+/*
+static VOID(WINAPI * SysRtlCopyMemory)(
+    _In_ PVOID ,
+    _In_ const VOID * ,
+    _In_ SIZE_T 
     );
-MY_DLL_EXPORT VOID NewRtlCopyMemory(
-    VOID UNALIGNED* Destination,
-    const VOID UNALIGNED* Source,
-    SIZE_T Length
+MY_DLL_EXPORT VOID WINAPI NewRtlCopyMemory(
+    _In_ PVOID Destination,
+    _In_ const VOID* Source,
+    _In_ SIZE_T Length
 ) {
-    if (PrintOption & Printsocket)
+    if (PrintOption & PrintCopyMemory)
     {
         swprintf(BufferStr, 1000, L"\n**************************************************\n");
         AddToInfor(BufferStr); BufferStr[0] = 0;
@@ -981,7 +991,8 @@ MY_DLL_EXPORT VOID NewRtlCopyMemory(
         AddToInfor(BufferStr); BufferStr[0] = 0;
         DLLLogOutput();
     }
-    return SysRtlCopyMemory(Destination, Source, Length);
+    SysRtlCopyMemory(Destination, Source, Length);
+    return;
 }
 //*/
 
@@ -1004,6 +1015,9 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain( HMODULE hModule,
    // AddAvoidProcess(ProcessPath);ProcessPath[0] = 0;
     //测试
     fopen_s(&TempOutPath, ".\\qwer.txt", "w");
+    HMODULE hDll;
+    hDll = LoadLibrary(L"kernel32.dll");
+    assert(hDll != NULL);
     if (DetourIsHelperProcess())
     {
         return TRUE;
@@ -1053,13 +1067,12 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain( HMODULE hModule,
         DetourAttach(&(PVOID&)Syssend, Newsend);
         DetourAttach(&(PVOID&)Sysconnect, Newconnect);
 
-        /*
-        HINSTANCE hMod = LoadLibrary(L"kermel32.dll");
-        SysRtlMoveMemory =(RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
+        SysRtlMoveMemory =(RelMemoryOption)GetProcAddress(hDll, "RtlMoveMemory");
+        assert(SysRtlMoveMemory != NULL);
         DetourAttach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
 
-        
-        SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlCopyMemory");
+        /*
+        SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlCopyMemory");
         DetourAttach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
         //*/
         //*/
@@ -1106,11 +1119,11 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain( HMODULE hModule,
         DetourDetach(&(PVOID&)Syssend, Newsend);
         DetourDetach(&(PVOID&)Sysconnect, Newconnect);
 
-   /*     HINSTANCE hMod = LoadLibrary(L"kermel32.dll");
-        SysRtlMoveMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
+        SysRtlMoveMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlMoveMemory");
+        assert(SysRtlMoveMemory != NULL);
         DetourDetach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
-
-        SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlCopyMemory");
+        /* 
+        SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlCopyMemory");
         DetourDetach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
         //*/
         //*/

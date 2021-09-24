@@ -1,0 +1,18 @@
+qwq是sac开放的集成测试程序
+
+具体功能看一看源代码qwq.cpp
+
+1 MessageBoxA
+2 MessageBoxW
+3 堆操作 heap
+4 文件创建和写      +写的内容   c+w
+5 读操作   c+r
+6 注册表操作 c+s+d+c
+7 MemCopy
+10 re free
+11 mdexe   
+12 self re
+13 reg
+14 folder
+
+0 退出

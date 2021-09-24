@@ -20,6 +20,7 @@
 //选择文件夹对话框
 #include<Shlobj.h>
 #include <WinSock2.h>
+#include <assert.h>
 
 #ifdef DLL_IMPLEMENT  
 #define DLL_API __declspec(dllexport)  
