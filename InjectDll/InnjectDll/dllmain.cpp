@@ -86,8 +86,8 @@ std::vector<LPVOID>Read_File;
 int flagg;           //用于函数中判断是否出现异常
 FILE* TempOutPath;       //用于输出到文件 默认地址为.\\qwer.txt
 
-MY_DLL_EXPORT void AddToInfor(WCHAR* str){ mtx.lock(); wcscat_s(Infor, str); mtx.unlock();}
-MY_DLL_EXPORT void AddToErrorInfor(WCHAR* str) { mtx.lock(); wcscat_s(ERRORInfor, str); mtx.unlock(); }
+MY_DLL_EXPORT void AddToInfor(WCHAR* str){ mtx.lock(); wcscat_s(Infor, str); mtx.unlock();} //注意这里应该用"\n"来换行
+MY_DLL_EXPORT void AddToErrorInfor(WCHAR* str) { mtx.lock(); wcscat_s(ERRORInfor, str); mtx.unlock(); }  //注意这里应该用"\r\n"来换行
 
 MY_DLL_EXPORT void AddAvoidProcess(WCHAR* hLocalPath) { MTXOnProcess.lock(); wcscat_s(AvoidProcess[++CntAvoidProcess], hLocalPath);
 swprintf(BufferStr, 1000, L"Add New Avoid ProcessPath = > %lS\n", hLocalPath);
@@ -259,12 +259,8 @@ MY_DLL_EXPORT int WINAPI NewMessageBoxW(_In_opt_ HWND hWnd, _In_opt_ LPCWSTR lpT
 堆相关操作
 ***************************************************************************************************************/
 
-/* 
-********************************************************************************************************
-* 从此往下没有测试
-*/
 static HANDLE(WINAPI* SysHeapCreate)(DWORD fIOoptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize) = HeapCreate;
-MY_DLL_EXPORT HANDLE WINAPI NewHeapCreate(DWORD fIOoptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize)  //未测试
+MY_DLL_EXPORT HANDLE WINAPI NewHeapCreate(DWORD fIOoptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize) 
 { 
     HANDLE ReturnHeapHANDLE = SysHeapCreate(fIOoptions, dwInitialSize, dwMaximumSize);;
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
@@ -301,10 +297,10 @@ MY_DLL_EXPORT LPVOID WINAPI NewHeapAlloc(_In_ HANDLE hHeap,_In_ DWORD dwFlags,_I
         if (*iter == hHeap) {  flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有create过的堆（句柄为%p）中分配空间\n", hHeap);
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在一个没有create过的堆（句柄为%p）中分配空间\r\n", hHeap);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         return SysHeapAlloc(hHeap, dwFlags, dwBytes);           //可能需要调整
     }
 
@@ -338,8 +334,8 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapDestroy(HANDLE hHeap)
         if (*iter == hHeap) { Created_Heap.erase(iter); flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在destroy一个没有create过的堆，句柄为%p\n", hHeap);
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在destroy一个没有create过的堆，句柄为%p\r\n", hHeap);
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常
     }flagg = 0;
@@ -367,7 +363,7 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapFree(HANDLE hHeap, DWORD dwFlags, _Frees_ptr_op
         if (*iter == hHeap) { Created_Heap.erase(iter); flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有create过的堆（句柄为%p）中释放空间\n", hHeap);
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在一个没有create过的堆（句柄为%p）中释放空间\r\n", hHeap);
         AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，或许需要存储分配的内存的所有指针
@@ -378,8 +374,8 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapFree(HANDLE hHeap, DWORD dwFlags, _Frees_ptr_op
         if (*iter == hHeap) { Heap_Alloc_lp.erase(iter); flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在一个没有alloc过的堆（句柄为%p）中释放空间\n", hHeap);
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在一个没有alloc过的堆（句柄为%p）中释放空间\r\n", hHeap);
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，或许需要存储分配的内存的所有指针
         //return SysHeapFree(hHeap, dwFlags, lpMem);          //可能需要调整
@@ -460,8 +456,8 @@ MY_DLL_EXPORT HANDLE WINAPI NewCreateFile(        //还没有测试
     flagg = 0;
     if ((flagg = NumberofSubfolders(lpFileName)) >= 2)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 当前目录下存在%d个子文件夹\n", flagg);
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 当前目录下存在%d个子文件夹\r\n", flagg);
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，
     }flagg = 0;
@@ -469,8 +465,8 @@ MY_DLL_EXPORT HANDLE WINAPI NewCreateFile(        //还没有测试
     //getFileName((WCHAR*)lpFileName, FileName);      //似乎不需要
     if ((wcsstr(lpFileName, L".exe") || wcsstr(lpFileName, L".dll") || wcsstr(lpFileName, L".ocx")) && (dwDesiredAccess & GENERIC_WRITE))
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 可能正在试图修改可执行程序\n");
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 可能正在试图修改可执行程序\r\n");
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，
     }
@@ -479,8 +475,8 @@ MY_DLL_EXPORT HANDLE WINAPI NewCreateFile(        //还没有测试
     FileNameAddress = (WCHAR*)wcsstr(lpFileName, FileName);
     if (dwDesiredAccess & GENERIC_READ && FileNameAddress != NULL && (FileNameAddress == lpFileName || *(FileNameAddress - 1) == L'\\'))
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 可能正在试图复制自身\n");
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 可能正在试图复制自身\r\n");
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //***************************************************************************************************************************************
         //此处需要处理一类异常，
     }
@@ -517,10 +513,10 @@ MY_DLL_EXPORT BOOL WINAPI NewCloseHandle(HANDLE hObject)
         if (*iter == hObject) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在关闭一个没有create过的文件句柄（句柄为%p）\n", hObject);
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在关闭一个没有create过的文件句柄（句柄为%p）\r\n", hObject);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //return SysCloseHandle(hObject);           //可能需要调整
     }
     flagg = 0;
@@ -560,10 +556,10 @@ MY_DLL_EXPORT BOOL WINAPI NewReadFile(
         if (*iter == hFile) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在使用一个没有create过的文件句柄（句柄为%p）进行读操作\n", hFile);
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在使用一个没有create过的文件句柄（句柄为%p）进行读操作\r\n", hFile);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //return SysReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
     }
     flagg = 0;
@@ -605,10 +601,10 @@ MY_DLL_EXPORT BOOL WINAPI NewWriteFile(
         if (*iter == hFile) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在使用一个没有create过的文件句柄（句柄为%p）进行写操作\n", hFile);
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在使用一个没有create过的文件句柄（句柄为%p）进行写操作\r\n", hFile);
         //***************************************************************************************************************************************
         //此处需要处理一类异常
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //return SysWriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
     }
     flagg = 0;
@@ -653,21 +649,6 @@ MY_DLL_EXPORT LSTATUS WINAPI NewRegCreateKeyEx(
     PHKEY                       phkResult,
     LPDWORD                     lpdwDisposition
 ) {
-    LSTATUS ReturnLSTATU=SysRegCreateKeyEx(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
-    if (*lpdwDisposition == REG_CREATED_NEW_KEY && ERROR_SUCCESS== ReturnLSTATU)
-    {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在创建一个新的注册表项\n");
-        //***************************************************************************************************************************************
-        //此处需要处理一类异常
-        AddToInfor(BufferStr); BufferStr[0] = 0;
-        if (wcsstr(lpSubKey, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
-        {
-            swprintf(BufferStr, 1000, L"ERROR:\n 正在创建一个自启动注册表项\n");
-            //***************************************************************************************************************************************
-            //此处需要处理一类异常
-            AddToInfor(BufferStr); BufferStr[0] = 0;
-        }
-    }
 
     
     if (PrintOption & PrintRegCreateKeyEx)
@@ -676,7 +657,7 @@ MY_DLL_EXPORT LSTATUS WINAPI NewRegCreateKeyEx(
         AddToInfor(BufferStr); BufferStr[0] = 0;
         swprintf(BufferStr, 1000, L"RegCreateKeyEx Hooked\n");
         AddToInfor(BufferStr); BufferStr[0] = 0;
-        swprintf(BufferStr, 1000, L"\nParameters:\nhKey = > %p\nlpSubKey = > %lS\nReserved = > %u\nlpClass = > %lS\ndwOptions = > %d\nsamDesired = > %u\nphkResult = >%u\nlpdwDisposition = > %p,*lpdwDisposition = > %u\n", hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, phkResult, lpdwDisposition, *lpdwDisposition);
+        swprintf(BufferStr, 1000, L"\nParameters:\nhKey = > %p\nlpSubKey = > %lS\nReserved = > %u\nlpClass = > %lS\ndwOptions = > %d\nsamDesired = > %u\nphkResult = >%p\nlpdwDisposition = > %p,*lpdwDisposition = > %u\n", hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, phkResult, lpdwDisposition, *lpdwDisposition);
         AddToInfor(BufferStr); BufferStr[0] = 0;
         if (lpSecurityAttributes != NULL)
         {
@@ -685,6 +666,24 @@ MY_DLL_EXPORT LSTATUS WINAPI NewRegCreateKeyEx(
         }
         DLLLogOutput();
     }
+
+    LSTATUS ReturnLSTATU=SysRegCreateKeyEx(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
+    //if (*lpdwDisposition == REG_CREATED_NEW_KEY && ERROR_SUCCESS== ReturnLSTATU)
+    if(1)
+    {
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在创建一个新的注册表项\r\n");
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
+        if (wcsstr(lpSubKey, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
+        {
+            swprintf(BufferStr, 1000, L"ERROR:\r\n 正在创建一个自启动注册表项\r\n");
+            //***************************************************************************************************************************************
+            //此处需要处理一类异常
+            AddToErrorInfor(BufferStr); BufferStr[0] = 0;
+        }
+    }
+
     return ReturnLSTATU;
 }
 
@@ -707,10 +706,10 @@ MY_DLL_EXPORT LSTATUS WINAPI NewRegSetValueEx(
     LSTATUS ReturnLSTATU = SysRegSetValueEx(hKey, lpValueName, Reserved, dwType, lpData, cbData);
     if ( ERROR_SUCCESS == ReturnLSTATU)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在修改一个注册表项\n");
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在修改一个注册表项\r\n");
         //***************************************************************************************************************************************
         //此处需要处理一类异常
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
     }
 
     if (PrintOption & PrintRegSetValueEx)
@@ -781,10 +780,10 @@ MY_DLL_EXPORT LSTATUS WINAPI NewRegDeleteValue(
     LSTATUS ReturnLSTATU = SysRegDeleteValue(hKey, lpValueName);
     if (ERROR_SUCCESS == ReturnLSTATU)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在删除一个注册表项\n");
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在删除一个注册表项\r\n");
         //***************************************************************************************************************************************
         //此处需要处理一类异常
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
     }
     if (PrintOption & PrintRegDeleteValue)
     {
@@ -811,6 +810,28 @@ static SOCKET(WINAPI* Syssocket)(
     int protocol
     ) = socket;
 MY_DLL_EXPORT SOCKET WINAPI Newsocket(int af, int type, int protocol) {
+
+    if (protocol == IPPROTO_TCP)
+    {
+        swprintf(BufferStr, 1000, L"SOCKET:\r\n 正在使用TCP传输协议\r\n");
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
+    } else  if (protocol == IPPROTO_UDP)
+    {
+        swprintf(BufferStr, 1000, L"SOCKET:\r\n 正在使用UDP传输协议\r\n");
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
+    }
+    else  if (protocol == IPPROTO_SCTP)
+    {
+        swprintf(BufferStr, 1000, L"SOCKET:\r\n 正在使用STCP传输协议\r\n");
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
+    }
+
     if (PrintOption & Printsocket)
     {
         swprintf(BufferStr, 1000, L"\n**************************************************\n");
@@ -830,6 +851,22 @@ static int (WINAPI* Sysbind)(
     int            namelen
     ) = bind;
 MY_DLL_EXPORT int WINAPI Newbind(SOCKET s, const sockaddr * name, int namelen) {
+
+    if (sizeof(*name) == sizeof(sockaddr_in))
+    {
+        swprintf(BufferStr, 1000, L"SOCKET:\r\n 端口为%d,Addr 为%d\r\n", ((sockaddr_in* )name)->sin_port, ((sockaddr_in*)name)->sin_addr.s_addr);
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
+    }
+    else  
+    {
+        //swprintf(BufferStr, 1000, L"SOCKET:\r\n 端口为%d,Addr 为%d\r\n", ((sockaddr_in6*)name)->sin_port, ((sockaddr_in6*)name)->sin_addr.s_addr);
+        swprintf(BufferStr, 1000, L"SOCKET:not use ipv4");
+        //***************************************************************************************************************************************
+        //此处需要处理一类异常
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
+    }
     //name->sa_data
     if (PrintOption & Printbind)
     {
@@ -856,10 +893,10 @@ MY_DLL_EXPORT int WINAPI Newsend(SOCKET s, const char* buf, int len, int flags) 
         if (buf == *iter) { flagg = 1; break; }
     if (flagg == 0)
     {
-        swprintf(BufferStr, 1000, L"ERROR:\n 正在向网络发送从文件中读取的信息\n");
+        swprintf(BufferStr, 1000, L"ERROR:\r\n 正在向网络发送从文件中读取的信息\r\n");
         //***************************************************************************************************************************************
         //此处需要处理一类异常
-        AddToInfor(BufferStr); BufferStr[0] = 0;
+        AddToErrorInfor(BufferStr); BufferStr[0] = 0;
         //return SysReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
     }
     if (PrintOption & Printsend)
@@ -900,8 +937,8 @@ MY_DLL_EXPORT int WINAPI Newconnect(SOCKET s, const sockaddr * name, int namelen
 ***************************************************************************************************************/
 //暂时不能用   去掉stdcall？
 /*
-typedef  VOID(* RelMemoryOption)(VOID UNALIGNED* Destination, const VOID UNALIGNED* Source, SIZE_T Length);
-static VOID (* SysRtlMoveMemory)(
+typedef  VOID(* __stdcall  RelMemoryOption)(VOID UNALIGNED* Destination, const VOID UNALIGNED* Source, SIZE_T Length);
+static VOID (*WINAPI SysRtlMoveMemory)(
     VOID UNALIGNED* Destination,
     const VOID UNALIGNED* Source,
     SIZE_T Length
@@ -924,7 +961,7 @@ MY_DLL_EXPORT VOID NewRtlMoveMemory(
     return SysRtlMoveMemory(Destination, Source, Length);
 }
 
-static VOID(* SysRtlCopyMemory)(
+static VOID(*WINAPI SysRtlCopyMemory)(
     VOID UNALIGNED* Destination,
     const VOID UNALIGNED* Source,
     SIZE_T Length
@@ -946,7 +983,7 @@ MY_DLL_EXPORT VOID NewRtlCopyMemory(
     }
     return SysRtlCopyMemory(Destination, Source, Length);
 }
-*/
+//*/
 
 
 
@@ -1016,11 +1053,11 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain( HMODULE hModule,
         DetourAttach(&(PVOID&)Syssend, Newsend);
         DetourAttach(&(PVOID&)Sysconnect, Newconnect);
 
-        /*HMODULE hMod = LoadLibrary(L"kermel32.dll");
+       /* HINSTANCE hMod = LoadLibrary(L"kermel32.dll");
         SysRtlMoveMemory =(RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
         DetourAttach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
 
-
+        
         SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlCopyMemory");
         DetourAttach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
         //*/
@@ -1068,7 +1105,7 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain( HMODULE hModule,
         DetourDetach(&(PVOID&)Syssend, Newsend);
         DetourDetach(&(PVOID&)Sysconnect, Newconnect);
 
-        /*HMODULE hMod = LoadLibrary(L"kermel32.dll");
+ /*       HMODULE hMod = LoadLibrary(L"kermel32.dll");
         SysRtlMoveMemory = (RelMemoryOption)GetProcAddress(hMod, "RtlMoveMemory");
         DetourDetach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
 

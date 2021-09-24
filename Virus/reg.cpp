@@ -4,11 +4,11 @@ int main(void)
 {
 	//根键、子键名称和到子键的句柄
 	HKEY hRoot=HKEY_LOCAL_MACHINE;
-	char szSubKey[]="Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+	WCHAR szSubKey[]=L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
 	HKEY hKey;//打开指定子键
 	DWORD dwDisposition=REG_OPENED_EXISTING_KEY;
 	//如果不存在就创建
-	LONG lRet=RegCreateKeyEx(
+	LONG lRet=RegCreateKeyExW(
 		hRoot,
 		szSubKey,
 		0,
@@ -24,9 +24,9 @@ int main(void)
 	char szModule[MAX_PATH];
 	GetModuleFileName(NULL,szModule,MAX_PATH);
 	//创建一个新的键值，设置键值数据为文件
-	lRet=RegSetValueEx(
+	lRet=RegSetValueExW(
 		hKey,
-		"SelfRunDemo",
+		L"SelfRunDemo",
 		0,
 		REG_SZ,
 		(BYTE*)szModule,

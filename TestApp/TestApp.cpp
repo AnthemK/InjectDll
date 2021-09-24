@@ -202,9 +202,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    ErrorOuput = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
        375, 350, 800, 494, DemoFunctionInterface, nullptr, hInst, nullptr);
-   Errordit = CreateWindow(L"edit", L"错误信息输出", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOVSCROLL /*垂直滚动*/| ES_MULTILINE | ES_WANTRETURN| ES_MULTILINE | ES_WANTRETURN,
-       0 /*x坐标*/, 0 /*y坐标*/, 800 /*宽度*/, 494 /*高度*/, ErrorOuput, nullptr, hInst, NULL);
-   //error输出界面            ，输出的换行和进度条问题，以及重复使用问题
+   Errordit = CreateWindow(L"edit", L"错误信息输出", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOVSCROLL /*垂直滚动*/ | ES_MULTILINE | ES_WANTRETURN | ES_MULTILINE | ES_WANTRETURN,
+       20 /*x坐标*/, 12 /*y坐标*/, 740 /*宽度*/, 400 /*高度*/, ErrorOuput, nullptr, hInst, NULL);
+   //error输出界面            
 
 
    if (!DemoFunctionInterface) return FALSE;
@@ -316,9 +316,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                     HWND hstaticedit = CreateWindow(L"static", L"选择文件", WS_CHILD | WS_VISIBLE | SS_CENTERIMAGE /*垂直居中*/ | SS_RIGHT /*水平居右*/,
                         0 /*x坐标*/, 20 /*y坐标*/, 70 /*宽度*/, 26 /*高度*/, DemoFunctionInterface, (HMENU)DEMO_STATIC_EDIT, hInst, NULL);
                     Demoedit = CreateWindow(L"edit", L"", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOHSCROLL /*水平滚动*/,
-                        80, 20, 200, 26, DemoFunctionInterface, (HMENU)DEMO_EDIT, hInst, NULL);
+                        80, 20, 300, 26, DemoFunctionInterface, (HMENU)DEMO_EDIT, hInst, NULL);
                     HWND hButton = CreateWindow(L"Button", L"选择文件", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-                        330, 20, 200, 26, DemoFunctionInterface, (HMENU)DEMO_BUTTON, hInst, NULL);
+                        400, 20, 150, 26, DemoFunctionInterface, (HMENU)DEMO_BUTTON, hInst, NULL);
                     ShowWindow(DemoFunctionInterface, SW_SHOW);
                     UpdateWindow(DemoFunctionInterface);
                 }else  MessageBox(0,L"TestOwn\r\nTTest",L"Test****",0);
@@ -475,11 +475,10 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
             swprintf(BufferStr, 1000, L"%lS", bSuccess?L"Sucessed":L"Failed");
             MessageBox(NULL, BufferStr, L"Detour ", 0); BufferStr[0] = 0;
             //SendMessage((HWND)lParam, WM_SETTEXT, (WPARAM)NULL, (LPARAM)StrFilename);
-
             ErrorOuput = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
                 375, 350, 800, 494, DemoFunctionInterface, nullptr, hInst, nullptr);
-            Errordit = CreateWindow(L"edit", L"错误信息输出", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOVSCROLL /*垂直滚动*/,
-                0 /*x坐标*/, 0 /*y坐标*/, 800 /*宽度*/, 494 /*高度*/, ErrorOuput, nullptr, hInst, NULL);
+            Errordit = CreateWindow(L"edit", L"错误信息输出", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOVSCROLL /*垂直滚动*/ | ES_MULTILINE | ES_WANTRETURN | ES_MULTILINE | ES_WANTRETURN,
+                20 /*x坐标*/, 12 /*y坐标*/, 740 /*宽度*/, 400 /*高度*/, ErrorOuput, nullptr, hInst, NULL);
 
             SetWindowTextW(Errordit, ERRORInfor);
             ShowWindow(ErrorOuput, SW_SHOW);
