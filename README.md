@@ -20,7 +20,7 @@
 
 ## 设计架构
 
-![设计架构](README.assets/设计架构.png)
+![设计架构](./README.assets/设计架构.png)
 其中TestApp，InjectDLL，Test Console分别为三个项目
 
 
