@@ -60,7 +60,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,                //引用程序的
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);      //从与指定模块关联的可执行文件加载字符串资源，并将字符串复制到带有终止空字符的缓冲区中
     LoadStringW(hInstance, IDC_TESTAPP, szWindowClass, MAX_LOADSTRING);   
     wcscpy_s(szDemoFunctionInterfaceClass, L"DemoFunctionInterfaceClass");
-    wcscpy_s(szDemoFunctionInterfaceClassTitle,L"Choose a Function");
+    wcscpy_s(szDemoFunctionInterfaceClassTitle,L"Choose a Executable File");
     MyRegisterClass(hInstance);
 
 
@@ -159,8 +159,8 @@ HWND MainInterface;
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 { 
-   HMODULE hMod = LoadLibrary(L"C:\\Users\\lenovo\\Desktop\\Working\\SoftwareSecurityExperiment\\InjectDll\\Debug\\InnjectDll.dll");       //最好改成相对地址
-   if (hMod == 0) MessageBox(NULL, L"Can't Load Library", L"C:\\Users\\lenovo\\Desktop\\Working\\SoftwareSecurityExperiment\\InjectDll\\Debug\\InnjectDll.dll", 0);
+   HMODULE hMod = LoadLibrary(L"..\\InjectDll\\Debug\\InnjectDll.dll");       //最好改成相对地址
+   if (hMod == 0) MessageBox(NULL, L"Can't Load Library", L"..\\InjectDll\\Debug\\InnjectDll.dll", 0);
    AddAvoidProc = (AddProcess)GetProcAddress(hMod, "AddAvoidProcess"); AddAimProc = (AddProcess)GetProcAddress(hMod, "AddAimProcess"); //函数指针
    GetModuleFileNameW(NULL, ProcessPath, MAX_PATH);
    AddAvoidProc(ProcessPath); ProcessPath[0] = 0;
