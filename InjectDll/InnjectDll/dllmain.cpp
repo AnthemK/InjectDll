@@ -1136,7 +1136,6 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain(HMODULE hModule,
         SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlCopyMemory");
         DetourDetach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
         //*/
-        //*/
         DetourTransactionCommit();
         break;
     }
