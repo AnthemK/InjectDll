@@ -45,5 +45,8 @@
     <Image Include="TestApp.ico">
       <Filter>资源文件</Filter>
     </Image>
+    <Image Include="No_Error.ico">
+      <Filter>资源文件</Filter>
+    </Image>
   </ItemGroup>
 </Project>

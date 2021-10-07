@@ -156,6 +156,7 @@
     <ResourceCompile Include="TestApp.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="No_Error.ico" />
     <Image Include="small.ico" />
     <Image Include="TestApp.ico" />
   </ItemGroup>

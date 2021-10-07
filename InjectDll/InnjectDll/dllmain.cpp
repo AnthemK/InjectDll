@@ -7,7 +7,7 @@
 #include <ctime>
 #include <detours.h>
 #include <windows.h>
-#include "framework.h"
+//#include "framework.h"
 #include <stdarg.h>
 #include <wchar.h>
 #include <sstream>
@@ -21,6 +21,13 @@
 #include <WinSock2.h>
 #include <assert.h>
 #pragma comment(lib,"detours.lib")
+
+#define InAvoidProc 0
+#define InAimProc 1
+#define OtherProc 2
+//标识当前程序是否为指定要（避免，执行，任意）的类型
+//注意目前并没有在全文更换使用此宏
+
 
 //#define PrintNoInformation
 #define PrintAllInformation
@@ -113,7 +120,7 @@ MY_DLL_EXPORT DWORD IfDetour(WCHAR* hLocalPath) {
 
     for (int i = 1; i <= CntAvoidProcess; ++i)            //判断是否为avoid ，注意avoid的优先级高于aim因此如果一个应用程序同时出现在两处，会被判断为Avoid
     {
-        if (wcscmp(AvoidProcess[i], hLocalPath) == 0) return 0;      //表示当前进程不能Detour
+        if (wcscmp(AvoidProcess[i], hLocalPath) == 0) return InAvoidProc;      //表示当前进程不能Detour
         if (PrintOption & PrintAllProcessPathInfor)    //如果定义宏就输出全部的Avoid的Path
         {
             swprintf(BufferStr, 1000, L"Avoid Process%d = > %lS\n", i, AvoidProcess[i]);
@@ -123,7 +130,7 @@ MY_DLL_EXPORT DWORD IfDetour(WCHAR* hLocalPath) {
 
     for (int i = 1; i <= CntAimProcess; ++i)
     {
-        if (wcscmp(AimProcess[i], hLocalPath) == 0) return 1;         //表示当前进程必须要Detour
+        if (wcscmp(AimProcess[i], hLocalPath) == 0) return InAimProc;         //表示当前进程必须要Detour
         if (PrintOption & PrintAllProcessPathInfor)
         {
             swprintf(BufferStr, 1000, L"Aim Process%d = > %lS\n", i, AimProcess[i]);
@@ -136,7 +143,7 @@ MY_DLL_EXPORT DWORD IfDetour(WCHAR* hLocalPath) {
         swprintf(BufferStr, 10000, L"Now ProcessPath = > %lS\n", hLocalPath);
         AddToInfor(BufferStr); BufferStr[0] = 0;
     }
-    return 2;         //表示当前进程可以Detour也可以不Detour
+    return OtherProc;         //表示当前进程可以Detour也可以不Detour
 }
 
 MY_DLL_EXPORT BOOL GetNowProcessPath(WCHAR* lpModuleName)    //一个直接获取当前进程Path的函数
@@ -225,7 +232,7 @@ static int (WINAPI* SysMessageBoxA)(_In_opt_ HWND hWnd, _In_opt_ LPCSTR lpText, 
 MY_DLL_EXPORT int WINAPI NewMessageBoxA(_In_opt_ HWND hWnd, _In_opt_ LPCSTR lpText, _In_opt_ LPCSTR lpCaption, _In_ UINT uType)
 {
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);       //获取当前进程Path并且进行判断的模板
-    if (IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0; return SysMessageBoxA(hWnd, lpText, lpCaption, uType);}
+    if (IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0; return SysMessageBoxA(hWnd, lpText, lpCaption, uType);}
     ProcessPath[0] = 0;
     //*/
     if (PrintOption & PrintMessageBoxA)
@@ -247,7 +254,7 @@ static int (WINAPI* SysMessageBoxW)(_In_opt_ HWND hWnd, _In_opt_ LPCWSTR lpText,
 MY_DLL_EXPORT int WINAPI NewMessageBoxW(_In_opt_ HWND hWnd, _In_opt_ LPCWSTR lpText, _In_opt_ LPCWSTR lpCaption, _In_ UINT uType)
 {
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    if (IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0; return SysMessageBoxW(hWnd, lpText, lpCaption, uType);}
+    if (IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0; return SysMessageBoxW(hWnd, lpText, lpCaption, uType);}
     ProcessPath[0] = 0;
     //*/
     if (PrintOption & PrintMessageBoxW)
@@ -274,7 +281,7 @@ MY_DLL_EXPORT HANDLE WINAPI NewHeapCreate(DWORD fIOoptions, SIZE_T dwInitialSize
 {
     HANDLE ReturnHeapHANDLE = SysHeapCreate(fIOoptions, dwInitialSize, dwMaximumSize);;
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0;return ReturnHeapHANDLE;}
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0;return ReturnHeapHANDLE;}
     ProcessPath[0] = 0;
     //*/
     if (PrintOption & PrintHeapCreate)
@@ -299,7 +306,7 @@ MY_DLL_EXPORT LPVOID WINAPI NewHeapAlloc(_In_ HANDLE hHeap, _In_ DWORD dwFlags, 
 {
 
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    if (ProcessPath[0] == 0 ||IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0; return SysHeapAlloc(hHeap, dwFlags, dwBytes);}
+    if (ProcessPath[0] == 0 ||IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0; return SysHeapAlloc(hHeap, dwFlags, dwBytes);}
     ProcessPath[0] = 0;
     //*/
     flagg = 0;
@@ -340,7 +347,7 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapDestroy(HANDLE hHeap)
     /*
     ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
     //if (ProcessPath[0] == 0) system("pause");
-    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0; return SysHeapDestroy(hHeap);}
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0; return SysHeapDestroy(hHeap);}
     ProcessPath[0] = 0; */
     for (std::vector<HANDLE>::iterator iter = Created_Heap.begin(); iter != Created_Heap.end(); iter++)
         if (*iter == hHeap) { Created_Heap.erase(iter); flagg = 1; break; }
@@ -368,7 +375,7 @@ MY_DLL_EXPORT BOOL WINAPI NewHeapDestroy(HANDLE hHeap)
 static BOOL(WINAPI* SysHeapFree)(HANDLE hHeap, DWORD dwFlags, _Frees_ptr_opt_ LPVOID lpMem) = HeapFree;
 MY_DLL_EXPORT BOOL WINAPI NewHeapFree(HANDLE hHeap, DWORD dwFlags, _Frees_ptr_opt_ LPVOID lpMem) {
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0;  return SysHeapFree(hHeap, dwFlags, lpMem);}
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0;  return SysHeapFree(hHeap, dwFlags, lpMem);}
     ProcessPath[0] = 0; */
     flagg = 0;
     for (std::vector<HANDLE>::iterator iter = Created_Heap.begin(); iter != Created_Heap.end(); iter++)
@@ -462,7 +469,7 @@ MY_DLL_EXPORT HANDLE WINAPI NewCreateFile(        //还没有测试
 )
 {
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0;  return SysCreateFile(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);}
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0;  return SysCreateFile(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);}
     ProcessPath[0] = 0;*/
     HANDLE ReturnFileHANDLE = SysCreateFile(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     flagg = 0;
@@ -517,7 +524,7 @@ static BOOL(WINAPI* SysCloseHandle)(HANDLE hObject) = CloseHandle;
 MY_DLL_EXPORT BOOL WINAPI NewCloseHandle(HANDLE hObject)
 {
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0;  return SysCloseHandle(hObject);}
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0;  return SysCloseHandle(hObject);}
     ProcessPath[0] = 0;
     */
     flagg = 0;
@@ -561,7 +568,7 @@ MY_DLL_EXPORT BOOL WINAPI NewReadFile(
 )
 {
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0;  return SysReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped); }    ProcessPath[0] = 0; flagg = 0;
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0;  return SysReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped); }    ProcessPath[0] = 0; flagg = 0;
     ProcessPath[0] = 0; */
     flagg = 0;
     for (std::vector<HANDLE>::iterator iter = Created_File.begin(); iter != Created_File.end(); iter++)
@@ -606,7 +613,7 @@ MY_DLL_EXPORT BOOL WINAPI NewWriteFile(
 {
 
     /*ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
-    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != 1) { ProcessPath[0] = 0;  return SysWriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);}
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0;  return SysWriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);}
     ProcessPath[0] = 0;*/
     flagg = 0;
     for (std::vector<HANDLE>::iterator iter = Created_File.begin(); iter != Created_File.end(); iter++)
@@ -952,9 +959,9 @@ MY_DLL_EXPORT int WINAPI Newconnect(SOCKET s, const sockaddr* name, int namelen)
 /**************************************************************************************************************
 内存拷贝监测与关联分析
 ***************************************************************************************************************/
-//暂时不能用   去掉stdcall？
+//暂时不能用   去掉stdcall？   会勾到自己的函数？
 
-typedef  VOID(__stdcall* RelMemoryOption)(PVOID, const VOID*, SIZE_T);
+typedef  VOID(WINAPI* RelMemoryOption)(PVOID, const VOID*, SIZE_T);
 static VOID(WINAPI* SysRtlMoveMemory)(
     _In_ PVOID,
     _In_ const VOID*,
@@ -965,6 +972,11 @@ MY_DLL_EXPORT VOID WINAPI NewRtlMoveMemory(
     _In_ const VOID* Source,
     _In_ SIZE_T Length
 ) {
+    ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0; SysRtlMoveMemory(Destination, Source, Length); return;}
+    ProcessPath[0] = 0;
+    //*/  
+    //增加一个判断环节
     if (PrintOption & PrintMoveMemory)
     {
         swprintf(BufferStr, 1000, L"\n**************************************************\n");
@@ -1009,9 +1021,9 @@ MY_DLL_EXPORT VOID WINAPI NewRtlCopyMemory(
 
 
 WCHAR TEMP[1000000];
-void Test()
+DWORD Test()       //如果有什么想要的测试可以从这里写 目前为空
 {
-
+    return true;
 }
 
 
