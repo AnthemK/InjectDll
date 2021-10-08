@@ -1,3 +1,5 @@
+//请一定记得编译成32位版本!!!!!! 
+
 #include<windows.h>
 #include<stdio.h>
 #include <stdlib.h>
