@@ -1,5 +1,5 @@
 //请一定记得编译成32位版本!!!!!! 
-
+//在链接命令行中加上  -lws2_32  或者添加 ws2_32.lib; 附加依赖项 
 #include<windows.h>
 #include<stdio.h>
 #include <stdlib.h>
