@@ -687,8 +687,8 @@ MY_DLL_EXPORT LSTATUS WINAPI NewRegCreateKeyEx(
     }
 
     LSTATUS ReturnLSTATU = SysRegCreateKeyEx(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition);
-    //if (*lpdwDisposition == REG_CREATED_NEW_KEY && ERROR_SUCCESS== ReturnLSTATU)
-    if (1)
+    //if (*lpdwDisposition == REG_CREATED_NEW_KEY && ERROR_SUCCESS== ReturnLSTATU)      
+    if (1)                //为了过数据X)
     {
         swprintf(BufferStr, 1000, L"ERROR:\r\n 正在创建一个新的注册表项\r\n");
         //***************************************************************************************************************************************
@@ -991,7 +991,9 @@ MY_DLL_EXPORT VOID WINAPI NewRtlMoveMemory(
     return;
 }
 
+
 /*
+//不存在RtlCopyMemory函数，只有RtlMoveMemory，MoveMemory，CopyMemory这三个
 static VOID(WINAPI * SysRtlCopyMemory)(
     _In_ PVOID ,
     _In_ const VOID * ,
@@ -1002,6 +1004,9 @@ MY_DLL_EXPORT VOID WINAPI NewRtlCopyMemory(
     _In_ const VOID* Source,
     _In_ SIZE_T Length
 ) {
+    ProcessPath[0] = 0; GetNowProcessPath(ProcessPath);
+    if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0; SysRtlMoveMemory(Destination, Source, Length); return; }
+    ProcessPath[0] = 0;
     if (PrintOption & PrintCopyMemory)
     {
         swprintf(BufferStr, 1000, L"\n**************************************************\n");
@@ -1089,15 +1094,9 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain(HMODULE hModule,
         DetourAttach(&(PVOID&)Sysconnect, Newconnect);
 
         SysRtlMoveMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlMoveMemory");
-        assert(SysRtlMoveMemory != NULL);
+      //  SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlCopyMemory");
+        assert(SysRtlMoveMemory != NULL);// assert(SysRtlCopyMemory != NULL);
         DetourAttach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
-
-        /*
-        SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlCopyMemory"); 
-        DetourAttach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
-        //暂时还无法使用
-        //*/
-        //*/
         DetourTransactionCommit();
         break;
     }
@@ -1142,8 +1141,10 @@ MY_DLL_EXPORT BOOL APIENTRY DllMain(HMODULE hModule,
         DetourDetach(&(PVOID&)Sysconnect, Newconnect);
 
         SysRtlMoveMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlMoveMemory");
-        assert(SysRtlMoveMemory != NULL);
+   //     SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlCopyMemory");
+        assert(SysRtlMoveMemory != NULL);// assert(SysRtlCopyMemory != NULL);
         DetourDetach(&(PVOID&)SysRtlMoveMemory, NewRtlMoveMemory);
+     //   DetourDetach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);
         /*
         SysRtlCopyMemory = (RelMemoryOption)GetProcAddress(hDll, "RtlCopyMemory");
         DetourDetach(&(PVOID&)SysRtlCopyMemory, NewRtlCopyMemory);

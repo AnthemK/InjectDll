@@ -1,7 +1,7 @@
+#define UNICODE
 #include<windows.h>
 #include<stdio.h>
 #include <stdlib.h>
-#define scanf scanf_s
 //#include <WinSock2.h>
 #pragma comment(lib, "ws2_32.lib")  //╪сть ws2_32.dll
 //#include <wchar.h>
@@ -133,10 +133,10 @@ void headCreateAndDestory() {
 	for (int i = 0; i < 30; ++i)
 	{
 		if (i % 5 == 0)
-			printf_s("\n");
+			puts("");
 		printf("%3d ", pArr[i]);
 	}
-	printf_s("\n\n");
+	puts("");puts("");
 	printf("Press any key to start HeapFree!\n");
 	getchar();
 	HeapFree(hHeap, 0, pArr);
@@ -197,7 +197,7 @@ void regCreateAndSetValue() {
 	HKEY hKey = NULL;
 	TCHAR Data[254];
 	memset(Data, 0, sizeof(Data));
-	wcsncpy_s(Data, TEXT("https://github.com/AgentGuo"), 254);
+	wcsncpy(Data, TEXT("https://github.com/AgentGuo"), 254);
 
 	size_t lRet = RegCreateKeyEx(HKEY_CURRENT_USER, (LPWSTR)L"aaaMykey", 0, NULL, REG_OPTION_NON_VOLATILE,
 		KEY_ALL_ACCESS, NULL, &hKey, NULL);
@@ -254,10 +254,10 @@ void headRepeatedRelease() {
 	for (int i = 0; i < 30; ++i)
 	{
 		if (i % 5 == 0)
-			printf_s("\n");
+			puts("");
 		printf("%3d ", pArr[i]);
 	}
-	printf_s("\n\n");
+	puts("");puts("");
 	printf("Press any key to start the first HeapFree!\n");
 	getchar();
 	HeapFree(hHeap, 0, pArr);
