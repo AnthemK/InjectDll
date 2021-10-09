@@ -479,20 +479,23 @@ LRESULT CALLBACK FunctionDemoProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
             swprintf(BufferStr, 1000, L"%lS", bSuccess ? L"Sucessed" : L"Failed");
             MessageBox(NULL, BufferStr, L"Detour ", 0); BufferStr[0] = 0;
             //SendMessage((HWND)lParam, WM_SETTEXT, (WPARAM)NULL, (LPARAM)StrFilename);
-            if (ERRORInfor != NULL && ERRORInfor[0] != 0)
+            if (bSuccess == 1)
             {
-                ErrorOuput = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
-                    375, 350, 800, 494, DemoFunctionInterface, nullptr, hInst, nullptr);
-                Errordit = CreateWindow(L"edit", L"错误信息输出", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOVSCROLL /*垂直滚动*/ | ES_MULTILINE | ES_WANTRETURN | ES_MULTILINE | ES_WANTRETURN,
-                    20 /*x坐标*/, 12 /*y坐标*/, 740 /*宽度*/, 400 /*高度*/, ErrorOuput, nullptr, hInst, NULL);
+                if (ERRORInfor != NULL && ERRORInfor[0] != 0)
+                {
+                    ErrorOuput = CreateWindow(szDemoFunctionInterfaceClass, szDemoFunctionInterfaceClassTitle, WS_OVERLAPPEDWINDOW,
+                        375, 350, 800, 494, DemoFunctionInterface, nullptr, hInst, nullptr);
+                    Errordit = CreateWindow(L"edit", L"错误信息输出", WS_CHILD | WS_VISIBLE | WS_BORDER /*边框*/ | ES_AUTOVSCROLL /*垂直滚动*/ | ES_MULTILINE | ES_WANTRETURN | ES_MULTILINE | ES_WANTRETURN,
+                        20 /*x坐标*/, 12 /*y坐标*/, 740 /*宽度*/, 400 /*高度*/, ErrorOuput, nullptr, hInst, NULL);
 
-                SetWindowTextW(Errordit, ERRORInfor);
-                ShowWindow(ErrorOuput, SW_SHOW);
-                UpdateWindow(ErrorOuput);
-                InvalidateRect(ErrorOuput, NULL, FALSE);
-            }
-            else {
-                DialogBox(hInst, MAKEINTRESOURCE(NO_ERROR_DIALOG), hWnd, About);
+                    SetWindowTextW(Errordit, ERRORInfor);
+                    ShowWindow(ErrorOuput, SW_SHOW);
+                    UpdateWindow(ErrorOuput);
+                    InvalidateRect(ErrorOuput, NULL, FALSE);
+                }
+                else {
+                    DialogBox(hInst, MAKEINTRESOURCE(NO_ERROR_DIALOG), hWnd, About);       //输出一个没有错误的窗口
+                }
             }
 
             break;

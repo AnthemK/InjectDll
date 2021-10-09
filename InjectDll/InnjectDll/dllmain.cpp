@@ -976,7 +976,7 @@ MY_DLL_EXPORT VOID WINAPI NewRtlMoveMemory(
     if (ProcessPath[0] == 0 || IfDetour(ProcessPath) != InAimProc) { ProcessPath[0] = 0; SysRtlMoveMemory(Destination, Source, Length); return;}
     ProcessPath[0] = 0;
     //*/  
-    //增加一个判断环节
+    //增加一个判断环节，防止无限递归
     if (PrintOption & PrintMoveMemory)
     {
         swprintf(BufferStr, 1000, L"\n**************************************************\n");

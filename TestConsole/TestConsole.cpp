@@ -27,6 +27,8 @@
 #define DLL_API __declspec(dllimport)  
 #endif  
 #define CountdownBeforeExit 10
+//最终会进行CountdownBeforeExit秒倒计时然后退出
+
 
 #pragma comment(lib,"detours.lib")
 #pragma comment(lib,"InnjectDll.lib")     //为了引用变量，不能删
