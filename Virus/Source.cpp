@@ -111,11 +111,11 @@ void showMenu() {
 	//printf("\n*************************************************************************************\n");
 	printf("--------------------------------please select an option--------------------------------\n");
 	printf("--Normal operation--:\n");
-	printf("1.MessageBoxA      2.MessageBoxW            3.headCreateAndDestory   4.writeFileString\n");
+	printf("1.MessageBoxA      2.MessageBoxW            3.heapCreateAndDestory   4.writeFileString\n");
 	printf("5.readFileString   6.regCreateAndSetValue   7.regOpenAndDelValue     8.socketRecvData\n");
 	printf("9.socketSendData\n");
 	printf("--Malicious operation--:\n");
-	printf("10.headRepeatedRelease   11.Modifying executable program   12.selfReplication\n");
+	printf("10.heapRepeatedRelease   11.Modifying executable program   12.selfReplication\n");
 	printf("13.modifyStartupRegistry   14.openAnotherFolder\n");
 }
 void headCreateAndDestory() {

@@ -882,8 +882,8 @@ MY_DLL_EXPORT int WINAPI Newbind(SOCKET s, const sockaddr* name, int namelen) {
         int IPAddr[10];
         char IPAddress[1000];
         for (int i = 4; i; --i) IPAddr[i] = ((sockaddr_in*)name)->sin_addr.s_addr & 0xff, ((sockaddr_in*)name)->sin_addr.s_addr >>= 8;
-        //swprintf(BufferStr, 1000, L"SOCKET:\r\n 端口为%d,Addr 为%d.%d.%d.%d\r\n", ((sockaddr_in*)name)->sin_port, IPAddr[4], IPAddr[3], IPAddr[2], IPAddr[1]);
-        swprintf(BufferStr, 1000, L"SOCKET:\r\n 端口为%d,IP为%s\r\n", ntohs(((sockaddr_in*)name)->sin_port), inet_ntoa(((sockaddr_in*)name)->sin_addr));
+        swprintf(BufferStr, 1000, L"SOCKET:\r\n 端口为%d,IP 为%d.%d.%d.%d\r\n", ntohs(((sockaddr_in*)name)->sin_port), IPAddr[4], IPAddr[3], IPAddr[2], IPAddr[1]);
+        //swprintf(BufferStr, 1000, L"SOCKET:\r\n 端口为%d,IP为%s\r\n", ntohs(((sockaddr_in*)name)->sin_port), inet_ntoa(((sockaddr_in*)name)->sin_addr));
         //***************************************************************************************************************************************
         //此处需要处理一类异常
         AddToErrorInfor(BufferStr); BufferStr[0] = 0;

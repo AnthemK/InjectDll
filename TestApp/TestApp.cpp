@@ -141,7 +141,8 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     ofn.nFilterIndex = 1;//过滤器索引
     ofn.lpstrFile = StrFilename;//接收返回的文件名，注意第一个字符需要为NULL
     ofn.nMaxFile = sizeof(StrFilename);//缓冲区长度
-    ofn.lpstrInitialDir = L".\\";//初始目录为默认
+    //ofn.lpstrInitialDir = L"..\\Virus";   //初始目录为Virus文件，用于本地的测试
+    ofn.lpstrInitialDir = L"..\\";   //初始目录为当前文件的上一级
     ofn.lpstrTitle = TEXT("请选择一个文件");//使用系统默认标题留空即可
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;//文件、目录必须存在，隐藏只读选项
 
@@ -338,6 +339,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             InvalidateRect(MainInterface, NULL, FALSE);
             break;
         case STATIC_BUTTON_CLEAR:
+
             PrintInf(1);
             InvalidateRect(MainInterface, NULL, FALSE);
             break;
