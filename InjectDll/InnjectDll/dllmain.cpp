@@ -676,7 +676,12 @@ MY_DLL_EXPORT LSTATUS WINAPI NewRegCreateKeyEx(
         AddToInfor(BufferStr); BufferStr[0] = 0;
         swprintf(BufferStr, 1000, L"RegCreateKeyEx Hooked\n");
         AddToInfor(BufferStr); BufferStr[0] = 0;
-        swprintf(BufferStr, 1000, L"\nParameters:\nhKey = > %p\nlpSubKey = > %lS\nReserved = > %u\nlpClass = > %lS\ndwOptions = > %d\nsamDesired = > %u\nphkResult = >%p\nlpdwDisposition = > %p,*lpdwDisposition = > %u\n", hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, phkResult, lpdwDisposition, *lpdwDisposition);
+        swprintf(BufferStr, 1000, L"\nParameters:\nhKey = > %p\nlpSubKey = > %lS\nReserved = > %u\n", hKey, lpSubKey, Reserved);
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        swprintf(BufferStr, 1000, L"lpClass = > %lS\ndwOptions = > %d\nsamDesired = > %u\nphkResult = >%p\nlpdwDisposition = > %p,*lpdwDisposition = > %u\n",lpClass, dwOptions, samDesired, phkResult, lpdwDisposition);
+        AddToInfor(BufferStr); BufferStr[0] = 0;
+        if (lpdwDisposition) swprintf(BufferStr, 1000, L",*lpdwDisposition = > %u\n", *lpdwDisposition);
+        else swprintf(BufferStr, 1000, L"\n");
         AddToInfor(BufferStr); BufferStr[0] = 0;
         if (lpSecurityAttributes != NULL)
         {
